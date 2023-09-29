@@ -1,6 +1,6 @@
 # OpticalFibers.jl
 
-OpticalFibers.jl is a package that allows to compute modes of optical fibers. Different methods are implemented to find scalar or vector modes:
+OpticalFibers.jl is a package that allows to compute modes of optical fibers. Different methods are implemented to find scalar or vector modes: 
 - A semi-analytical solver (based on Bessel functions) for multi-step index fibers.
 - Finite difference method for graded-index isotropic fibers.
 - Finite element method (using `Gridap.jl`) for any kind of isotropic or anisotropic fiber (useful to find leaky modes using a PML for example)
