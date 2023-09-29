@@ -143,7 +143,7 @@ using OpticalFibers.ModeSolvers
 using Gridap
 using GridapGmsh
 using GLMakie
-using CairoMakie
+using GridapMakie
 model = GmshDiscreteModel("../../models/Step_index_fiber.msh");
 permittivity=x->1+2*(x[1]^2+x[2]^2<=1);
 m=FEM(1,5,permittivity,model,sqrt(3),order=2,solver=:MUMPS,field=true,type=:Vector);
@@ -152,7 +152,7 @@ MFD(m[1])
 It is possible to plot the z-component of the Poynting Vector:
 ```@example 3
 Px,Py,Pz=PoyntingVector(m[1]);
-fig,ax,plot_obj=CairoMakie.plot(m[1].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
+fig,ax,plot_obj=GLMakie.plot(m[1].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
 ax.xlabel="x (µm)";
 ax.ylabel="y (µm)";
 ax.title="neff = "*"$(real(m[1].neff))";
