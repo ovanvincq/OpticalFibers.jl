@@ -12,18 +12,14 @@ This fiber is bimodal at $\lambda=1$ µm since the normalized frequency is $V=\f
 To compute the two modes, we can use the fuction `multi_step_fiber_modes` that returns a vector of modes:
 
 ```@example 1
-#using Pkg; nothing # hide
-#Pkg.activate("../.."); nothing # hide
+using Pkg; nothing # hide
+Pkg.activate("../.."); nothing # hide
 using OpticalFibers
 using OpticalFibers.ModeSolvers
 m0=multi_step_fiber_modes(1,0,2,[1.47,1.45],maxPosition=10);
-length(m0)
 m01=m0[1]
 m1=multi_step_fiber_modes(1,1,2,[1.47,1.45],maxPosition=10);
-length(m1)
 m11=m1[1]
-m2=multi_step_fiber_modes(1,2,2,[1.47,1.45],maxPosition=10);
-length(m2)
 nothing; #hide
 ```
 
@@ -60,7 +56,7 @@ L=1/(m01.neff-m11.neff)
 
 ```@example 1
 anim=@animate for j=0:214
-    TotalField=ScalarField(mm01,z=j)+ScalarField(mm11c,z=j);
+    TotalField=ScalarField(mm01,j)+ScalarField(mm11c,j);
     contourf(TotalField.x,TotalField.y,abs2.(TotalField.E'),levels=100,linewidth=0)
     title!("z = $j µm");
 end;
@@ -140,4 +136,26 @@ plot(lambda,A,label="Aeff",ylabel="Effective area (µm²)",xlabel="λ (µm)",col
 plot!(twinx(),lambda,gamma,label="γ",ylabel="Non-linear coefficient ((W.km)⁻¹)",color=:red,leg=:topleft)
 ```
 
-
+## Step-index fiber with FEM
+```@example 3
+using OpticalFibers
+using OpticalFibers.ModeSolvers
+using Gridap
+using GridapGmsh
+using GridapMakie
+using GLMakie
+model = GmshDiscreteModel("../../models/Step_index_fiber.msh");
+permittivity=x->1+2*(x[1]^2+x[2]^2<=1);
+m=FEM(1,5,permittivity,model,sqrt(3),order=2,solver=:MUMPS,field=true,type=:Vector);
+MFD(m[1])
+```
+It is possible to plot the z-component of the Poynting Vector:
+```@example 3
+Px,Py,Pz=PoyntingVector(m[1]);
+fig,ax,plot_obj=GLMakie.plot(m[1].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
+ax.xlabel="x (µm)";
+ax.ylabel="y (µm)";
+ax.title="neff = "*"$(real(m[1].neff))";
+save("FEM.png",fig); nothing #hide
+```
+![Pz for FM computed with FEM](FEM.png)

@@ -12,6 +12,8 @@ This module defines two types of field: the scalar field (valid in the case of w
 Field
 ScalarField
 VectorField
+ScalarFieldFEM
+VectorFieldFEM
 ```
 Two fields of the same type can be add or substract if their coordinates x and y are similar. It is also possible to multiply or divide a field by a scalar.
 
@@ -27,6 +29,8 @@ Mode
 ScalarMode1D
 ScalarMode2D
 VectorMode
+ScalarModeFEM
+VectorModeFEM
 ```
 A ScalarMode1D can be convert into a ScalarMode2D or a VectorMode:
 ```@docs
@@ -38,14 +42,21 @@ A ScalarMode2D can be convert into a VectorMode:
 VectorMode(::ScalarMode2D;::Char)
 ```
 
+A ScalarModeFEM can be convert into a VectorModeFEM:
+```@docs
+VectorModeFEM(::ScalarModeFEM;::Char)
+```
+
 ## Propagation of modes
 The field due to the propagation of a mode after a propagation distance z can be compute be using these functions:
 ```@docs
-ScalarField(::ScalarMode1D;::Char,::Real)
-ScalarField(::ScalarMode2D;::Real)
-VectorField(::VectorMode;::Real)
-VectorField(::ScalarMode2D;::Char,::Real)
-VectorField(::ScalarMode1D;::Char,::Char,::Real)
+ScalarField(::ScalarMode1D,::Real;::Char)
+ScalarField(::ScalarMode2D,::Real)
+VectorField(::VectorMode,::Real)
+VectorField(::ScalarMode2D,::Real;::Char)
+VectorField(::ScalarMode1D,::Real;::Char,::Char)
+ScalarFieldFEM(::ScalarModeFEM,::Real)
+VectorFieldFEM(::VectorModeFEM,::Real)
 ```
 
 ## Poynting vector
@@ -55,6 +66,8 @@ PoyntingVector(::VectorField)
 PoyntingVector(::VectorMode)
 PoyntingVector(::ScalarMode2D)
 PoyntingVector(::ScalarMode1D;::Char)
+PoyntingVector(::ScalarModeFEM)
+PoyntingVector(::VectorModeFEM)
 ```
 
 ## Mode normalization
@@ -64,6 +77,8 @@ The vector modes are normalized so as $\vert \iint \frac{1}{2}\left(\vec{E}\wedg
 normalize!(::ScalarMode1D;::Bool)
 normalize!(::ScalarMode2D;::Bool)
 normalize!(::VectorMode)
+normalize!(::ScalarModeFEM;::Bool)
+normalize!(::VectorModeFEM)
 ```
 
 ## Overlap integral
@@ -91,25 +106,27 @@ The effective area is defined by:
 ```@docs
     Aeff(::ScalarMode1D)
     Aeff(::ScalarMode2D)
-    Aeff(::VectorMode)
-    Aeff(::VectorMode,::Real)
-    Aeff(::VectorMode,::Function)
+    Aeff(::VectorMode,::Union{Real,Function})
+    Aeff(::ScalarModeFEM)
+    Aeff(::VectorModeFEM,::Union{Real,Function})
 ```
 
 ## Non-linear coefficient
-If all your lentghs are in microns and $n_2$ is in SI (m²/W), you have to multiply the result by $10^{18}$ to obtain the result in W$^{-1}$.m$^{-1}$
+If all the lentghs are in microns and $n_2$ is in SI (m²/W), you have to multiply the result by $10^{18}$ to obtain the result in W$^{-1}$.m$^{-1}$
 ```@docs
-    nonLinearCoefficient(::Mode,::Real)
-    nonLinearCoefficient(::VectorMode,::Real,::Real)
-    nonLinearCoefficient(::ScalarMode1D,::Function)
-    nonLinearCoefficient(::ScalarMode2D,::Function)
-    nonLinearCoefficient(::VectorMode,::Function,::Function)
+    nonLinearCoefficient(::ScalarMode1D,::Union{Real,Function})
+    nonLinearCoefficient(::ScalarMode2D,::Union{Real,Function})
+    nonLinearCoefficient(::VectorMode,::Union{Real,Function},::Union{Real,Function})
+    nonLinearCoefficient(::ScalarModeFEM,::Union{Real,Function})
+    nonLinearCoefficient(::VectorModeFEM,::Union{Real,Function},::Union{Real,Function})
 ```
 
 ## Mode Field Diameter (MFD)
-The computation MFD is only valid for Gaussian-like beam (maximum at the center of the fiber and electric field with a constant sign). The MFD is calculated by finding the positions where $E=\frac{\max{E}}{\exp(1)}$ for scalar modes and $P_z=\frac{\max{P_z}}{\exp(2)}$ for vector modes.
+The computation MFD is only valid for Gaussian-like beam (maximum at the center of the fiber and electric field with a constant sign). The MFD is calculated by finding the positions where $E=\frac{\max{\left(E\right)}}{\exp(1)}$ for scalar modes and $P_z=\frac{\max{\left(P_z\right)}}{\exp(2)}$ for vector modes.
 ```@docs
     MFD(::ScalarMode1D)
-    MFD(::ScalarMode2D;::Real)
-    MFD(::VectorMode;::Real)
+    MFD(::ScalarMode2D,::Real)
+    MFD(::VectorMode,::Real)
+    MFD(::ScalarModeFEM,::Real)
+    MFD(::VectorModeFEM,::Real)
 ```
