@@ -12,8 +12,8 @@ This fiber is bimodal at $\lambda=1$ µm since the normalized frequency is $V=\f
 To compute the two modes, we can use the fuction `multi_step_fiber_modes` that returns a vector of modes:
 
 ```@example 1
-using Pkg; nothing # hide
-Pkg.activate("../.."); nothing # hide
+#using Pkg; nothing # hide
+#Pkg.activate("../.."); nothing # hide
 using OpticalFibers
 using OpticalFibers.ModeSolvers
 m0=multi_step_fiber_modes(1,0,2,[1.47,1.45],maxPosition=10);
