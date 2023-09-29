@@ -142,7 +142,7 @@ using OpticalFibers
 using OpticalFibers.ModeSolvers
 using Gridap
 using GridapGmsh
-using GridapMakie
+using GLMakie
 using CairoMakie
 model = GmshDiscreteModel("../../models/Step_index_fiber.msh");
 permittivity=x->1+2*(x[1]^2+x[2]^2<=1);
