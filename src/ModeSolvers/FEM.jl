@@ -6,7 +6,7 @@ Returns a vector of `ScalarModeFEM` if type=:Scalar or a vector of `VectorModeFE
 The fiber is isotropic and described with its relative permittivity epsilon(pos) where pos is the tuple (x,y).
 
 - lambda: wavelength
-- mmax: maximal number of modes (useful if the fiber is very multimode)
+- mmax: number of modes to be calculated
 - eps: function of the tuple (x,y) that describes the relative permittivity profile
 - model: DiscreteModel generated with `GridapGmsh.jl`
 - approx_neff: effective index around which the modes will be computed
@@ -54,7 +54,7 @@ function FEM1(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx
         E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
         for i=1:length(neff)
             name=string("Mode ",string(i));
-            push!(sol,ScalarModeFEM(name,neff[i],lambda,reffe,U,Ω,dΩ,E[i]));
+            push!(sol,ScalarModeFEM(name,neff[i],lambda,Ω,dΩ,E[i]));
         end
     else
         for i=1:length(neff)
@@ -120,8 +120,6 @@ function FEM2(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx
     U = MultiFieldFESpace([U1, U2])
     degree = 4*order;
     dΩ = Measure(Ω,degree);
-    #a((u1,u2),(v1,v2))=∫( -curl(v1)⋅curl(u1)*1.0/eps )*dΩ + ∫( (∇(u2))⋅(v1)*1.0/eps )*dΩ+∫( k2*(v1⋅u1+v2*u2) )*dΩ+ ∫( -(∇(u2))⋅(∇(v2))*1.0/eps )*dΩ
-    #b((u1,u2),(v1,v2)) = ∫( (v1⋅u1)*1.0/eps )*dΩ+∫( -(∇(v2))⋅(u1)*1.0/eps )*dΩ
     a((Et1,Ez1),(Et2,Ez2))=∫( -curl(Et2)⋅curl(Et1) + ∇(Ez2)⋅(Et1) + k2*(Et2⋅(eps*Et1)+Ez2*(eps*Ez1)) -∇(Ez1)⋅∇(Ez2) )*dΩ
     b((Et1,Ez1),(Et2,Ez2)) = ∫( (Et2⋅Et1)-∇(Ez1)⋅(Et2) )*dΩ
     A_task=assemble_matrix(a,U,V);
@@ -150,7 +148,7 @@ function FEM2(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx
             Ht,Hz=computeH(Bt,Bz,tensor3(x->1));
             Hx=Ht⋅ux;
             Hy=Ht⋅uy;
-            push!(sol,VectorModeFEM(name,neff[i],lambda,reffe1,reffe2,U1,U2,Ω,dΩ,Ex,Ey,Ez*im*2.0*pi*neff[i]/lambda,Hx,Hy,Hz));
+            push!(sol,VectorModeFEM(name,neff[i],lambda,Ω,dΩ,Ex,Ey,Ez*im*2.0*pi*neff[i]/lambda,Hx,Hy,Hz));
         end
     else
         for i=1:length(neff)
@@ -168,7 +166,7 @@ Returns a vector of `VectorModeFEM`.
 The fiber is anisotropic and described with its relative permittivity tensor and its relative permeability tensor.
 
 - lambda: wavelength
-- mmax: maximal number of modes (useful if the fiber is very multimode)
+- mmax: number of modes to be calculated
 - eps: functions of the tuple (x,y) that describes the relative permittivity tensor profile
 - mu: functions of the tuple (x,y) that describes the relative permeability tensor profile
 - model: DiscreteModel generated with `GridapGmsh.jl`
@@ -229,7 +227,7 @@ function FEM(lambda::Real,mmax::Int64,eps::tensor3,mu::tensor3,model::DiscreteMo
             Ht,Hz=computeH(Bt,Bz,invmu);
             Hx=Ht⋅ux;
             Hy=Ht⋅uy;
-            push!(sol,VectorModeFEM(name,neff[i],lambda,reffe1,reffe2,U1,U2,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz));
+            push!(sol,VectorModeFEM(name,neff[i],lambda,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz));
         end
     else
         for i=1:length(neff)

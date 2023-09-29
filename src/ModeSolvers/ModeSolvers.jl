@@ -23,6 +23,8 @@ export VectorModeFEM
 export VectorMode
 export ScalarField
 export VectorField
+export ScalarFieldFEM
+export VectorFieldFEM
 export PoyntingVector
 export normalize!
 export overlap

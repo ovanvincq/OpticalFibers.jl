@@ -97,6 +97,92 @@ Base.:real(f::VectorField) = VectorField(f.x,f.y,real(f.Ex),real(f.Ey),real(f.Ez
 Base.:imag(f::VectorField) = VectorField(f.x,f.y,imag(f.Ex),imag(f.Ey),imag(f.Ez),imag(f.Hx),imag(f.Hy),imag(f.Hz));
 Base.:conj(f::VectorField) = VectorField(f.x,f.y,conj(f.Ex),conj(f.Ey),conj(f.Ez),conj(f.Hx),conj(f.Hy),conj(f.Hz));
 
+"""
+Structure describing a scalar field defined with a Triangulation  
+
+- Ω :: `Gridap.Triangulation`
+- dΩ :: `Gridap.CellData.Measure`
+- E :: `Gridap.CellField` - Electric field
+"""
+mutable struct ScalarFieldFEM <: Field
+    Ω::Gridap.Triangulation
+    dΩ::Gridap.CellData.Measure
+    E::Gridap.CellField
+end
+
+function Base.:+(f1::ScalarFieldFEM, f2::ScalarFieldFEM)
+    if (f1.Ω==f2.Ω)
+        ScalarFieldFEM(f1.Ω,f1.dΩ,f1.E+f2.E)
+    else
+        throw(ArgumentError("Both fields must have the same triangulation"))
+    end
+end
+
+function Base.:-(f1::ScalarFieldFEM, f2::ScalarFieldFEM)
+    if (f1.Ω==f2.Ω)
+        ScalarFieldFEM(f1.Ω,f1.dΩ,f1.E-f2.E)
+    else
+        throw(ArgumentError("Both fields must have the same triangulation"))
+    end
+end
+
+Base.:*(k::Number, f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,k*f.E);
+Base.:*(f::ScalarFieldFEM,k::Number) = ScalarFieldFEM(f.Ω,f.dΩ,k*f.E);
+Base.:/(f::ScalarFieldFEM,k::Number) = ScalarFieldFEM(f.Ω,f.dΩ,f.E/k);
+Base.:+(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,f.E);
+Base.:-(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,-f.E);
+Base.:real(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,real(f.E));
+Base.:imag(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,imag(f.E));
+Base.:conj(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,conj(f.E));
+
+"""
+Structure describing a vector field defined with a Triangulation   
+
+- Ω :: `Gridap.Triangulation`
+- dΩ :: `Gridap.CellData.Measure`
+- Ex :: `Gridap.CellField` - x-component of the electric field
+- Ey :: `Gridap.CellField` - y-component of the electric field
+- Ez :: `Gridap.CellField` - z-component of the electric field
+- Hx :: `Gridap.CellField` - x-component of the magnetic field
+- Hy :: `Gridap.CellField` - y-component of the magnetic field
+- Hz :: `Gridap.CellField` - z-component of the magnetic field
+"""
+mutable struct VectorFieldFEM <: Field
+    Ω::Gridap.Triangulation
+    dΩ::Gridap.CellData.Measure
+    Ex::Gridap.CellField
+    Ey::Gridap.CellField
+    Ez::Gridap.CellField
+    Hx::Gridap.CellField
+    Hy::Gridap.CellField
+    Hz::Gridap.CellField
+end
+
+function Base.:+(f1::VectorFieldFEM, f2::VectorFieldFEM)
+    if (f1.Ω==f2.Ω)
+        VectorFieldFEM(f1.Ω,f1.dΩ,f1.Ex+f2.Ex,f1.Ey+f2.Ey,f1.Ez+f2.Ez,f1.Hx+f2.Hx,f1.Hy+f2.Hy,f1.Hz+f2.Hz)
+    else
+        throw(ArgumentError("Both fields must have the same triangulation"))
+    end
+end
+
+function Base.:-(f1::VectorFieldFEM, f2::VectorFieldFEM)
+    if (f1.Ω==f2.Ω)
+        VectorFieldFEM(f1.Ω,f1.dΩ,f1.Ex-f2.Ex,f1.Ey-f2.Ey,f1.Ez-f2.Ez,f1.Hx-f2.Hx,f1.Hy-f2.Hy,f1.Hz-f2.Hz)
+    else
+        throw(ArgumentError("Both fields must have the same triangulation"))
+    end
+end
+
+Base.:*(k::Number, f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,k*f.Ex,k*f.Ey,k*f.Ez,k*f.Hx,k*f.Hy,k*f.Hz);
+Base.:*(f::VectorFieldFEM,k::Number) = VectorFieldFEM(f.Ω,f.dΩ,k*f.Ex,k*f.Ey,k*f.Ez,k*f.Hx,k*f.Hy,k*f.Hz);
+Base.:/(f::VectorFieldFEM,k::Number) = VectorFieldFEM(f.Ω,f.dΩ,f.Ex/k,f.Ey/k,f.Ez/k,f.Hx/k,f.Hy/k,f.Hz/k);
+Base.:+(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,f.Ex,f.Ey,f.Ez,f.Hx,f.Hy,f.Hz);
+Base.:-(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,-f.Ex,-f.Ey,-f.Ez,-f.Hx,-f.Hy,-f.Hz);
+Base.:real(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,real(f.Ex),real(f.Ey),real(f.Ez),real(f.Hx),real(f.Hy),real(f.Hz));
+Base.:imag(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,imag(f.Ex),imag(f.Ey),imag(f.Ez),imag(f.Hx),imag(f.Hy),imag(f.Hz));
+Base.:conj(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,conj(f.Ex),conj(f.Ey),conj(f.Ez),conj(f.Hx),conj(f.Hy),conj(f.Hz));
+
 ############################# Modes #############################
 
 """
@@ -107,7 +193,7 @@ Abstract structure to describe an optical fiber mode
 abstract type Mode end
 
 """
-Structure describing a scalar mode in an optical fiber with a revolution symmetry
+Structure describing a scalar mode of an optical fiber with a revolution symmetry
 
 - Name :: `String` - Name of the mode
 - neff :: `Float64` - Effective index
@@ -137,7 +223,7 @@ end
 Base.show(io::IO, f::ScalarMode1D) = isempty(f.r) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",",f.nu,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",",f.nu,",[",minimum(f.r),",",maximum(f.r),"],[",minimum(f.E),",",maximum(f.E),"]]");
 
 """
-Structure describing a scalar mode in an optical fiber in cartesian coordinates
+Structure describing a scalar mode of an optical fiber in cartesian coordinates
 
 - Name :: `String` - Name of the mode
 - neff :: `Float64` - Effective index
@@ -167,7 +253,7 @@ end
 Base.show(io::IO, f::ScalarMode2D) = isempty(f.x) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",[",minimum(f.x),",",maximum(f.x),"],[",minimum(f.y),",",maximum(f.y),"],[",minimum(f.E),",",maximum(f.E),"]]");
 
 """
-Structure describing a vector mode in an optical fiber in cartesian coordinates.  
+Structure describing a vector mode of an optical fiber in cartesian coordinates.  
 
 This structure assumes that the fiber is made of a non-lossy materials. In this case, the x- and y-components of the electric/magnetic fields can be chosen real and their z-components are then pure imaginary numbers.
 
@@ -208,69 +294,88 @@ function Base.show(io::IO, ::MIME"text/plain",f::VectorMode)
 end
 Base.show(io::IO, f::VectorMode) = isempty(f.x) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",[",minimum(f.x),",",maximum(f.x),"],[",minimum(f.y),",",maximum(f.y),"],[",minimum(f.Ex),",",maximum(f.Ex),"],[",minimum(f.Ey),",",maximum(f.Ey),"],[",minimum(f.Ez),",",maximum(f.Ez),"],[",minimum(f.Hx),",",maximum(f.Hx),"],[",minimum(f.Hy),",",maximum(f.Hy),"],[",minimum(f.Hz),",",maximum(f.Hz),"]]");
 
+"""
+Structure describing a scalar mode of an optical fiber computed with FEM.  
+
+- Name :: `String` - Name of the mode
+- neff :: `Float64` - Effective index
+- lambda :: `Float64` - the wavelength at which the mode was calculated
+- Ω :: `Gridap.Triangulation`
+- dΩ :: `Gridap.CellData.Measure`
+- E :: `Gridap.CellField` - Electric field
+"""
 mutable struct ScalarModeFEM <: Mode
     Name::String
     neff::ComplexF64
     lambda::Float64
-    reffe#::ReferenceFE
-    U#::FESpace
-    Ω#::Triangulation
-    dΩ#::Measure
-    E#::CellField
-    ScalarModeFEM(Name,neff,lambda,reffe,U,Ω,dΩ,E)=new(Name,neff,lambda,reffe,U,Ω,dΩ,E)
-    ScalarModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[],[],[])
+    Ω::Gridap.Triangulation
+    dΩ::Gridap.CellData.Measure
+    E::Gridap.CellField
+    ScalarModeFEM(Name,neff,lambda,Ω,dΩ,E)=new(Name,neff,lambda,Ω,dΩ,E)
+    ScalarModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[])
 end
 
 function Base.show(io::IO, ::MIME"text/plain",f::ScalarModeFEM) 
-    if isempty(f.reffe) 
+    if (f.E==[]) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nfield: no");
     else
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nfield: yes");
     end
 end
-Base.show(io::IO, f::ScalarModeFEM) = isempty(f.reffe) ? print(io,"[",f.Name,",",f.neff,",",f.lambda,",no]") : print(io,"[",f.Name,",",f.neff,",",f.lambda,",yes]");
+Base.show(io::IO, f::ScalarModeFEM) = (f.E==[]) ? print(io,"[",f.Name,",",f.neff,",",f.lambda,",no]") : print(io,"[",f.Name,",",f.neff,",",f.lambda,",yes]");
 
 function writevtk(name::String,m::ScalarModeFEM)
-    if isempty(m.reffe)
-        throw(DomainError(m, "The mode does not contain a field"));
+    if (m.E==[])
+        throw(DomainError(m, "The mode does not contain any field"));
     else
         Gridap.writevtk(m.Ω,name,cellfields=["real(E)"=>real(m.E),"imag(E)"=>imag(m.E)]);
     end
     return nothing;
 end
 
+"""
+Structure describing a vector mode of an optical fiber computed with FEM.  
+
+- Name :: `String` - Name of the mode
+- neff :: `Float64` - Effective index
+- lambda :: `Float64` - the wavelength at which the mode was calculated
+- Ω :: `Gridap.Triangulation`
+- dΩ :: `Gridap.CellData.Measure`
+- Ex :: `Gridap.CellField` - x-component of the electric field
+- Ey :: `Gridap.CellField` - y-component of the electric field
+- Ez :: `Gridap.CellField` - z-component of the electric field
+- Hx :: `Gridap.CellField` - x-component of the magnetic field
+- Hy :: `Gridap.CellField` - y-component of the magnetic field
+- Hz :: `Gridap.CellField` - z-component of the magnetic field
+"""
 mutable struct VectorModeFEM <: Mode
     Name::String
     neff::ComplexF64
     lambda::Float64
-    reffe1#::ReferenceFE
-    reffe2#::ReferenceFE
-    U1#::FESpace
-    U2#::FESpace
-    Ω#::Triangulation
-    dΩ#::Measure
-    Ex#::CellField
-    Ey#::CellField
-    Ez#::CellField
-    Hx#::CellField
-    Hy#::CellField
-    Hz#::CellField
-    VectorModeFEM(Name,neff,lambda,reffe1,reffe2,U1,U2,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz)=new(Name,neff,lambda,reffe1,reffe2,U1,U2,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz)
-    VectorModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[],[],[],[],[],[],[],[],[],[])
+    Ω::Gridap.Triangulation
+    dΩ::Gridap.CellData.Measure
+    Ex::Gridap.CellField
+    Ey::Gridap.CellField
+    Ez::Gridap.CellField
+    Hx::Gridap.CellField
+    Hy::Gridap.CellField
+    Hz::Gridap.CellField
+    VectorModeFEM(Name,neff,lambda,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz)=new(Name,neff,lambda,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz)
+    VectorModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[],[],[],[],[],[])
 end
 
 function Base.show(io::IO, ::MIME"text/plain",f::VectorModeFEM) 
-    if isempty(f.reffe1) 
+    if (f.Ex==[]) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nfield: no");
     else
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nfield: yes");
     end
 end
-Base.show(io::IO, f::VectorModeFEM) = isempty(f.reffe1) ? print(io,"[",f.Name,",",f.neff,",",f.lambda,",no]") : print(io,"[",f.Name,",",f.neff,",",f.lambda,",yes]");
+Base.show(io::IO, f::VectorModeFEM) = (f.Ex==[]) ? print(io,"[",f.Name,",",f.neff,",",f.lambda,",no]") : print(io,"[",f.Name,",",f.neff,",",f.lambda,",yes]");
 
 function writevtk(name::String,m::VectorModeFEM)
-    if isempty(m.reffe1)
-        throw(DomainError(m, "The mode does not contain a field"));
+    if (m.Ex==[])
+        throw(DomainError(m, "The mode does not contain any field"));
     else
         Gridap.writevtk(m.Ω,name,cellfields=["real(Ex)"=>real(m.Ex),"imag(Ex)"=>imag(m.Ex),"real(Ey)"=>real(m.Ey),"imag(Ey)"=>imag(m.Ey),"real(Ez)"=>real(m.Ez),"imag(Ez)"=>imag(m.Ez),"real(Hx)"=>real(m.Hx),"imag(Hx)"=>imag(m.Hx),"real(Hy)"=>real(m.Hy),"imag(Hy)"=>imag(m.Hy),"real(Hz)"=>real(m.Hz),"imag(Hz)"=>imag(m.Hz)]);
     end
@@ -346,6 +451,29 @@ function VectorMode(m::ScalarMode1D;polar::Char='x',sincos::Char='c')
     VectorMode(ScalarMode2D(m,sincos=sincos),polar=polar)
 end
 
+"""
+    VectorModeFEM(m::ScalarModeFEM;polar::Char='x')
+
+Convert a ScalarModeFEM into a x- or y-polarized VectorModeFEM
+
+- polar must be 'x' or 'y'
+"""
+function VectorModeFEM(m::ScalarModeFEM;polar::Char='x')
+    if (!in(polar,['x','y']))
+        throw(DomainError(polar, "polar must be 'x' or 'y'"))
+    end
+    if (m.E==[])
+        return VectorModeFEM(m.Name,m.neff,m.lambda);
+    else
+        z=CellField(0,m.Ω)
+        if polar=='x'
+            return VectorModeFEM(m.Name,m.neff,m.lambda,m.Ω,m.dΩ,m.E,z,z,z,m.E*m.neff/c/mu0,z);
+        else
+            return VectorModeFEM(m.Name,m.neff,m.lambda,m.Ω,m.dΩ,z,m.E,z,-m.E*m.neff/c/mu0,z,z);
+        end
+    end
+end
+
 ############################# Poynting Vector #############################
 
 """
@@ -374,7 +502,7 @@ Return a tuple of 3 matrix that describes the Poynting Vector (Px,Py,Pz)
 - sincos must be 'c' for a field in cos(nu.θ) or 's' for a field in sin(nu.θ) if m.nu≠0
 """
 function PoyntingVector(m::ScalarMode1D;sincos::Char='c')
-    PoyntingVector(VectorMode(m,sincos=sincos))
+    PoyntingVector(ScalarMode2D(m,sincos=sincos))
 end
 
 """
@@ -383,48 +511,66 @@ end
 Return a tuple of 3 matrix that describes the Poynting Vector (Px,Py,Pz)
 """
 function PoyntingVector(m::ScalarMode2D)
-    PoyntingVector(VectorMode(m))
+    zeros(size(m.E)),zeros(size(m.E)),0.5*m.neff/c/mu0*abs2.(m.E)
+end
+
+"""
+    PoyntingVector(f::VectorModeFEM)
+
+Return a tuple of 3 CellFields that describes the Poynting Vector (Px,Py,Pz)
+"""
+function PoyntingVector(m::VectorModeFEM)
+    0.5*real(m.Ey.*conj(m.Hz)-m.Ez.*conj(m.Hy)),0.5*real(m.Ez.*conj(m.Hx)-m.Ex.*conj(m.Hz)),0.5*real(m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx))
+end
+
+"""
+    PoyntingVector(f::ScalarModeFEM)
+
+Return a tuple of 3 CellFields that describes the Poynting Vector (Px,Py,Pz)
+"""
+function PoyntingVector(m::ScalarModeFEM)
+    CellField(0,m.Ω),CellField(0,m.Ω),0.5*real(m.neff/c/mu0*abs2(m.E))
 end
 
 ############################# Conversion from mode to field i.e. propagation #############################
 
 """
-    ScalarField(m::ScalarMode2D;z::Real=0)
+    ScalarField(m::ScalarMode2D,z::Real=0)
 
 Returns the scalar field due to the mode m after a propagation distance z 
 
 - z: Propagation distance - Must be in the same unit as m.lambda
 """
-function ScalarField(m::ScalarMode2D;z::Real=0)
+function ScalarField(m::ScalarMode2D,z::Real=0)
     ScalarField(m.x,m.y,m.E*exp(im*z*2*pi/m.lambda*m.neff));
 end
 
 """
-    ScalarField(m::ScalarMode1D;sincos::Char='c',z::Real=0)
+    ScalarField(m::ScalarMode1D,z::Real=0;sincos::Char='c')
 
 Returns the scalar field due to the mode m after a propagation distance z 
 
 - sincos must be 'c' for a field in cos(nu.θ) or 's' for a field in sin(nu.θ) if m.nu≠0
 - z: Propagation distance - Must be in the same unit as m.lambda
 """
-function ScalarField(m::ScalarMode1D;sincos::Char='c',z::Real=0)
-    ScalarField(ScalarMode2D(m,sincos=sincos),z=z)
+function ScalarField(m::ScalarMode1D,z::Real=0;sincos::Char='c')
+    ScalarField(ScalarMode2D(m,sincos=sincos),z)
 end
 
 """
-    VectorField(m::VectorMode;z::Real=0)
+    VectorField(m::VectorMode,z::Real=0)
 
 Returns the vector field due to the mode m after a propagation distance z 
 
 - z: Propagation distance - Must be in the same unit as m.lambda
 """
-function VectorField(m::VectorMode;z::Real=0)
+function VectorField(m::VectorMode,z::Real=0)
     p=exp(im*z*2*pi/m.lambda*m.neff);
     VectorField(m.x,m.y,m.Ex*p,m.Ey*p,m.Ez*im*p,m.Hx*p,m.Hy*p,m.Hz*im*p);
 end
 
 """
-    VectorField(m::ScalarMode1D;polar::Char='x',sincos::Char='c',z::Real=0)
+    VectorField(m::ScalarMode1D,z::Real=0;polar::Char='x',sincos::Char='c')
 
 Returns the vector field due to the mode m after a propagation distance z 
 
@@ -432,20 +578,45 @@ Returns the vector field due to the mode m after a propagation distance z
 - sincos must be 'c' for a field in cos(nu.θ) or 's' for a field in sin(nu.θ) if m.nu≠0
 - z: Propagation distance - Must be in the same unit as m.lambda
 """
-function VectorField(m::ScalarMode1D;polar::Char='x',sincos::Char='c',z::Real=0)
-    VectorField(VectorMode(m,polar=polar,sincos=sincos),z=z)
+function VectorField(m::ScalarMode1D,z::Real=0;polar::Char='x',sincos::Char='c')
+    VectorField(VectorMode(m,polar=polar,sincos=sincos),z)
 end
 
 """
-    VectorField(m::ScalarMode2D;polar::Char='x',z::Real=0)
+    VectorField(m::ScalarMode2D,z::Real=0;polar::Char='x')
 
 Returns the vector field due to the mode m after a propagation distance z 
 
 - polar must be 'x' or 'y'
 - z: Propagation distance - Must be in the same unit as m.lambda
 """
-function VectorField(m::ScalarMode2D;polar::Char='x',z::Real=0)
-    VectorField(VectorMode(m,polar=polar),z=z)
+function VectorField(m::ScalarMode2D,z::Real=0;polar::Char='x')
+    VectorField(VectorMode(m,polar=polar),z)
+end
+
+
+"""
+    ScalarFieldFEM(m::ScalarModeFEM,z::Real=0)
+
+Returns the scalar field due to the mode m after a propagation distance z 
+
+- z: Propagation distance - Must be in the same unit as m.lambda
+"""
+function ScalarFieldFEM(m::ScalarModeFEM,z::Real=0)
+    p=exp(im*z*2*pi/m.lambda*m.neff);
+    ScalarFieldFEM(m.Ω,m.dΩ,p*m.E)
+end
+
+"""
+    VectorFieldFEM(m::VectorModeFEM,z::Real=0)
+
+Returns the vector field due to the mode m after a propagation distance z 
+
+- z: Propagation distance - Must be in the same unit as m.lambda
+"""
+function VectorFieldFEM(m::VectorModeFEM,z::Real=0)
+    p=exp(im*z*2*pi/m.lambda*m.neff);
+    VectorField(m.Ω,m.dΩ,m.Ex*p,m.Ey*p,m.Ez*p,m.Hx*p,m.Hy*p,m.Hz*p);
 end
 
 
@@ -556,8 +727,13 @@ function normalize!(m::VectorMode)
     return nothing
 end
 
+"""
+    normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
+
+Normalize the mode m with the method given by the boolean parameter `unitIntegral`.
+"""
 function normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
-    if !isempty(m.reffe)
+    if (m.E!=[])
         integral=sum(integrate(abs2(m.E),m.dΩ));
         if unitIntegral
             m.E=m.E/sqrt(integral);
@@ -567,8 +743,13 @@ function normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
     end
 end
 
+"""
+    normalize!(m::VectorModeFEM)
+
+Normalize the mode m.
+"""
 function normalize!(m::VectorModeFEM)
-    if !isempty(m.reffe1)
+    if (m.Ex!=[])
         integral=0.5*abs(sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ)));
         m.Ex=m.Ex/sqrt(integral);
         m.Ey=m.Ey/sqrt(integral);
@@ -610,14 +791,6 @@ function overlap(f1::VectorField,f2::VectorField)
         Ex1=interp.(x,y');
         interp=LinearInterpolation((f1.x,f1.y),f1.Ey,extrapolation_bc=0);
         Ey1=interp.(x,y');
-        interp=LinearInterpolation((f1.x,f1.y),f1.Hx,extrapolation_bc=0);
-        Hx1=interp.(x,y');
-        interp=LinearInterpolation((f1.x,f1.y),f1.Hy,extrapolation_bc=0);
-        Hy1=interp.(x,y');
-        interp=LinearInterpolation((f2.x,f2.y),f2.Ex,extrapolation_bc=0);
-        Ex2=interp.(x,y');
-        interp=LinearInterpolation((f2.x,f2.y),f2.Ey,extrapolation_bc=0);
-        Ey2=interp.(x,y');
         interp=LinearInterpolation((f2.x,f2.y),f2.Hx,extrapolation_bc=0);
         Hx2=interp.(x,y');
         interp=LinearInterpolation((f2.x,f2.y),f2.Hy,extrapolation_bc=0);
@@ -767,10 +940,6 @@ function overlap(f1::VectorField,m2::VectorMode)
         Ex1=interp.(x,y');
         interp=LinearInterpolation((f1.x,f1.y),f1.Ey,extrapolation_bc=0);
         Ey1=interp.(x,y');
-        interp=LinearInterpolation((f1.x,f1.y),f1.Hx,extrapolation_bc=0);
-        Hx1=interp.(x,y');
-        interp=LinearInterpolation((f1.x,f1.y),f1.Hy,extrapolation_bc=0);
-        Hy1=interp.(x,y');
         interp=LinearInterpolation((m2.x,m2.y),m2.Ex,extrapolation_bc=0);
         Ex2=interp.(x,y');
         interp=LinearInterpolation((m2.x,m2.y),m2.Ey,extrapolation_bc=0);
@@ -816,129 +985,209 @@ function Aeff(m::ScalarMode2D)
 end
 
 """
-    Aeff(m::VectorMode)
+    Aeff(m::VectorMode,n0::Union{Real,Function}=0)
 
-Compute effective areas by assuming that n0≃neff (true in a weakly-guiding fiber)
+Compute the effective area of the mode m. n0 can be a constant or a function of x and y.
+If n0=0, this function assumes that n0≃neff (true in a weakly-guiding fiber).
 """
-function Aeff(m::VectorMode)
+function Aeff(m::VectorMode,n0::Union{Real,Function}=0)
     #Approximation (neff=n0)
     E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
-    E4_1=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez)));
-    E4_2=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez)));
-    return E2^2/E4_1*mu0/eps0/(m.neff)^2,E2^2/E4_2*mu0/eps0/(m.neff)^2;
-end
-
-"""
-    Aeff(m::VectorMode)
-
-Compute effective areas by assuming that n0 is uniform
-"""
-function Aeff(m::VectorMode,n0::Real)
-    E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
-    E4_1=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez)));
-    E4_2=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez)));
-    return E2^2/E4_1*mu0/eps0/n0^2,E2^2/E4_2*mu0/eps0/n0^2;
-end
-
-"""
-    Aeff(m::VectorMode)
-
-n0 must be a function of the cartesian coordinates x and y
-"""
-function Aeff(m::VectorMode,n0::Function)
-    if (first(methods(n0)).nargs!=3)
-        throw(DomainError(n0, "The refractive index function must have 2 argument"));
+    if isa(n0,Function)
+        if (first(methods(n0)).nargs!=3)
+            throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
+        end
+        E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x',m.y).^2));
+        E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x',m.y).^2));
+        return E2^2/E4_1*mu0/eps0,E2^2/E4_2*mu0/eps0;
+    else
+        E4_1=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez)));
+        E4_2=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez)));
+        if (n0==0)
+            return E2^2/E4_1*mu0/eps0/(m.neff)^2,E2^2/E4_2*mu0/eps0/(m.neff)^2;
+        else
+            return E2^2/E4_1*mu0/eps0/n0^2,E2^2/E4_2*mu0/eps0/n0^2;
+        end
     end
-    E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
-    E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x',m.y).^2));
-    E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x',m.y).^2));
-    return E2^2/E4_1*mu0/eps0,E2^2/E4_2*mu0/eps0;
 end
 
+"""
+    Aeff(m::ScalarModeFEM)
+
+Compute the effective area of the mode m. 
+"""
 function Aeff(m::ScalarModeFEM)
     E2=sum(integrate(abs2(m.E),m.dΩ));
     E4=sum(integrate(abs2(abs2(m.E)),m.dΩ));
     return E2^2/E4;
 end
 
-function Aeff(m::VectorModeFEM)
+"""
+    Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
+
+Compute the effective area of the mode m. n0 can be a constant or a function of x and y.
+If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guiding fiber).
+"""
+function Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
     #Approximation (real(neff)=n0)
     E2=sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ));
-    E4_1=sum(integrate(abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
-    E4_2=sum(integrate(abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
-    return real(E2)^2/E4_1*mu0/eps0/(real(m.neff))^2,real(E2)^2/E4_2*mu0/eps0/(real(m.neff))^2;
+    if isa(n0,Function)
+        if (first(methods(n0)).nargs!=3)
+            throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
+        end
+        n02=x->n0(x[1],x[2])^2;
+        E4_1=sum(integrate(n02*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+        E4_2=sum(integrate(n02*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+        return real(E2)^2/E4_1*mu0/eps0,real(E2)^2/E4_2*mu0/eps0;
+    else
+        E4_1=sum(integrate(abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+        E4_2=sum(integrate(abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+        if (n0==0)
+            return real(E2)^2/E4_1*mu0/eps0/(real(m.neff))^2,real(E2)^2/E4_2*mu0/eps0/(real(m.neff))^2;
+        else
+            return real(E2)^2/E4_1*mu0/eps0/n0^2,real(E2)^2/E4_2*mu0/eps0/n0^2;
+        end
+    end
 end
+
 
 ############################# Nonlinear Coefficient #############################
 
 """
-    nonLinearCoefficient(m::Mode,n2::Real)
+    nonLinearCoefficient(m::ScalarMode1D,n2::Union{Real,Function})
+
+n2 must be a constant or a function of the radial coordinate r
 """
-function nonLinearCoefficient(m::Mode,n2::Real)
-    return n2*2*pi/m.lambda./Aeff(m);
+function nonLinearCoefficient(m::ScalarMode1D,n2::Union{Real,Function})
+    if (isa(n2,Real))
+        return n2*2*pi/m.lambda./Aeff(m);
+    else
+        if (first(methods(n2)).nargs!=2)
+            throw(DomainError(n2, "The non-linear index function must have 1 argument"));
+        end
+        E2=trapz(m.r,2*pi*m.r.*(m.E).^2);
+        E4=trapz(m.r,2*pi*(m.r.*(m.E).^4).*n2.(m.r));
+        if (m.nu!=0)
+            E2=E2*0.5;
+            E4=E4*3.0/8.0;
+        end
+        k0=2*pi/m.lambda;
+        return E4/(E2^2)*k0;
+    end
 end
 
 """
-    nonLinearCoefficient(m::VectorMode,n0::Real,n2::Real)
+    nonLinearCoefficient(m::ScalarMode2D,n2::Union{Real,Function})
+
+n2 must be a constant or a function of the cartesian coordinates x and y
 """
-function nonLinearCoefficient(m::VectorMode,n0::Real,n2::Real)
-    return n2*2*pi/m.lambda./Aeff(m,n0);
+function nonLinearCoefficient(m::ScalarMode2D,n2::Union{Real,Function})
+    if (isa(n2,Real))
+        return n2*2*pi/m.lambda./Aeff(m);
+    else
+        if (first(methods(n2)).nargs!=3)
+            throw(DomainError(n2, "The non-linear index function must have 2 argument"));
+        end
+        E2=trapz((m.x,m.y),(m.E).^2);
+        E4=trapz((m.x,m.y),((m.E).^4).*n2.(m.x,m.y'));
+        k0=2*pi/m.lambda;
+        return E4/(E2^2)*k0;
+    end
 end
 
 """
-    nonLinearCoefficient(m::ScalarMode1D,n2::Function)
+    nonLinearCoefficient(m::VectorMode,n2::Union{Real,Function},n0::Union{Real,Function}=0)
 
-n2 must be a function of the radial coordinate r
+n2 and n0 must be a constant or a function of x and y.
+If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guiding fiber).
 """
-function nonLinearCoefficient(m::ScalarMode1D,n2::Function)
-    if (first(methods(n2)).nargs!=2)
-        throw(DomainError(n2, "The non-linear index function must have 1 argument"));
+function nonLinearCoefficient(m::VectorMode,n2::Union{Real,Function},n0::Union{Real,Function}=0)
+    if (isa(n2,Real))
+        return n2*2*pi/m.lambda./Aeff(m,n0);
+    else
+        if (first(methods(n2)).nargs!=3)
+            throw(DomainError(n2, "The non-linear index function must have 2 argument"));
+        end
+        E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
+        k0=2*pi/m.lambda;
+        if (isa(n0,Real))
+            if (n0==0)
+                nn=m.neff^2;
+            else
+                nn=n0^2;
+            end
+            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*n2.(m.x,m.y'));
+            E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*n2.(m.x,m.y'));
+            return 1.0/(E2^2/E4_1*mu0/eps0)*k0*nn,1.0/(E2^2/E4_2*mu0/eps0)*k0*nn;
+        else
+            if (first(methods(n0)).nargs!=3)
+                throw(DomainError(n0, "The refractive index n0 function must have 2 argument"));
+            end
+            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
+            E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
+            return 1.0/(E2^2/E4_1*mu0/eps0)*k0,1.0/(E2^2/E4_2*mu0/eps0)*k0;
+        end
     end
-    E2=trapz(m.r,2*pi*m.r.*(m.E).^2);
-    E4=trapz(m.r,2*pi*(m.r.*(m.E).^4).*n2.(m.r));
-    if (m.nu!=0)
-        E2=E2*0.5;
-        E4=E4*3.0/8.0;
-    end
-    omega=2*pi*c/m.lambda;
-    return E4/(E2^2)*omega/c;
 end
 
 """
-    nonLinearCoefficient(m::ScalarMode2D,n2::Function)
+    nonLinearCoefficient(m::ScalarModeFEM,n2::Union{Real,Function})
 
-n2 must be a function of the cartesian coordinates x and y
+n2 must be a constant or a function of the cartesian coordinates x and y
 """
-function nonLinearCoefficient(m::ScalarMode2D,n2::Function)
-    if (first(methods(n2)).nargs!=3)
-        throw(DomainError(n2, "The non-linear index function must have 2 argument"));
+function nonLinearCoefficient(m::ScalarModeFEM,n2::Union{Real,Function})
+    if (isa(n2,Real))
+        return n2*2*pi/m.lambda./Aeff(m);
+    else
+        if (first(methods(n2)).nargs!=3)
+            throw(DomainError(n2, "The non-linear index function must have 2 argument"));
+        end
+        n2bis=x->n2(x[1],x[2]);
+        E2=sum(integrate(abs2(m.E),m.dΩ));
+        E4=sum(integrate(n2bis*abs2(abs2(m.E)),m.dΩ));
+        k0=2*pi/m.lambda;
+        return E4/(E2^2)*k0;
     end
-    #X,Y=meshgrid(m.x,m.y);
-    E2=trapz((m.x,m.y),(m.E).^2);
-    E4=trapz((m.x,m.y),((m.E).^4).*n2.(m.x,m.y'));
-    omega=2*pi*c/m.lambda;
-    return E4/(E2^2)*omega/c;
 end
 
 """
-    nonLinearCoefficient(m::VectorMode,n0::Function,n2::Function)
+    nonLinearCoefficient(m::VectorModeFEM,n2::Union{Real,Function},n0::Union{Real,Function}=0)
 
-n0 and n2 must be functions of the cartesian coordinates x and y
+    n2 and n0 must be a constant or a function of x and y.
+    If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guiding fiber).
 """
-function nonLinearCoefficient(m::VectorMode,n0::Function,n2::Function)
-    if (first(methods(n0)).nargs!=3)
-        throw(DomainError(n0, "The refractive index function must have 2 argument"));
+function nonLinearCoefficient(m::VectorModeFEM,n2::Union{Real,Function},n0::Union{Real,Function}=0)
+    if (isa(n2,Real))
+        return n2*2*pi/m.lambda./Aeff(m,n0);
+    else
+        if (first(methods(n2)).nargs!=3)
+            throw(DomainError(n2, "The non-linear index n2 function must have 2 argument"));
+        end
+        E2=real(sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ)));
+        k0=2*pi/m.lambda;
+        if (isa(n0,Real))
+            if (n0==0)
+                nn=m.neff^2;
+            else
+                nn=n0^2;
+            end
+            n2bis=x->n2(x[1],x[2]);
+            E4_1=sum(integrate(n2bis*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+            E4_2=sum(integrate(n2bis*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+            return 1.0/(E2^2/E4_1*mu0/eps0)*k0*nn,1.0/(E2^2/E4_2*mu0/eps0)*k0*nn;
+        else
+            if (first(methods(n0)).nargs!=3)
+                throw(DomainError(n0, "The refractive index n0 function must have 2 argument"));
+            end
+            n02n2=x->n2(x[1],x[2])*n0(x[1],x[2])^2;
+            E4_1=sum(integrate(n02n2*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+            E4_2=sum(integrate(n02n2*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+            return 1.0/(E2^2/E4_1*mu0/eps0)*k0,1.0/(E2^2/E4_2*mu0/eps0)*k0;
+        end
     end
-    if (first(methods(n2)).nargs!=3)
-        throw(DomainError(n2, "The non-linear index function must have 2 argument"));
-    end
-    #X,Y=meshgrid(m.x,m.y);
-    E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
-    E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
-    E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
-    omega=2*pi*c/m.lambda;
-    return 1.0/(E2^2/E4_1*mu0/eps0)*omega/c,1.0/(E2^2/E4_2*mu0/eps0)*omega/c;
 end
+
+
 
 ############################# MFD #############################
 """
@@ -950,17 +1199,17 @@ function MFD(m::ScalarMode1D)
 end
 
 """
-    MFD(m::ScalarMode2D;angle::Real=0)
+    MFD(m::ScalarMode2D,theta::Real=0)
 
-Compute the MFD in the direction given by the angle (angle with the x-axis)
+Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
 """
-function MFD(m::ScalarMode2D;angle::Real=0)
+function MFD(m::ScalarMode2D,theta::Real=0)
     rmax=sqrt(maximum(m.x)^2+maximum(m.y)^2);
-    dr=minimum([minimum(diff(m.x)),minimum(diff(m.y))]);
+    dr=min(minimum(diff(m.x)),minimum(diff(m.y)));
     nb=Integer(2*ceil(rmax/dr)+1);
     r=collect(LinRange(-rmax,rmax,nb));
-    x=r*cosd(angle);
-    y=r*sind(angle);
+    x=r*cosd(theta);
+    y=r*sind(theta);
     interp=LinearInterpolation((m.x,m.y),m.E,extrapolation_bc=0);
     E=interp.(x,y);
     posmax=argmax(abs.(E));
@@ -969,17 +1218,17 @@ function MFD(m::ScalarMode2D;angle::Real=0)
 end
 
 """
-    MFD(m::VectorMode;angle::Real=0)
+    MFD(m::VectorMode,theta::Real=0)
 
-Compute the MFD in the direction given by the angle (angle with the x-axis)
+Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
 """
-function MFD(m::VectorMode;angle::Real=0)
+function MFD(m::VectorMode,theta::Real=0)
     rmax=sqrt(maximum(m.x)^2+maximum(m.y)^2);
-    dr=minimum([minimum(diff(m.x)),minimum(diff(m.y))]);
+    dr=min(minimum(diff(m.x)),minimum(diff(m.y)));
     nb=Integer(2*ceil(rmax/dr)+1);
     r=collect(LinRange(-rmax,rmax,nb));
-    x=r*cosd(angle);
-    y=r*sind(angle);
+    x=r*cosd(theta);
+    y=r*sind(theta);
     Pz=m.Ex.*m.Hy-m.Ey.*m.Hx;
     interp=LinearInterpolation((m.x,m.y),Pz,extrapolation_bc=0);
     E2=interp.(x,y);
@@ -988,8 +1237,54 @@ function MFD(m::VectorMode;angle::Real=0)
     return abs(2*(r[pos]-r[posmax]));
 end
 
+"""
+    MFD(m::ScalarModeFEM,theta::Real=0)
 
+Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
+"""
+function MFD(m::ScalarModeFEM,theta::Real=0)
+    x=getindex.(m.Ω.grid.node_coordinates,1)
+    y=getindex.(m.Ω.grid.node_coordinates,2)
+    rmax=maximum(x*cosd(theta)+y*sind(theta))
+    rmin=minimum(x*cosd(theta)+y*sind(theta))
+    r=LinRange(rmin,rmax,10000)
+    E=zeros(10000);
+    for i=1:10000
+        try
+            E[i]=m.E(Point(r[i]*cosd(theta),r[i]*sind(theta)));
+        catch e
+            E[i]=0.0
+        end
+    end
+    posmax=argmax(abs.(E));
+    pos=argmin(abs.(abs.(E).-(maximum(abs.(E))/exp(1))));
+    return abs(2*(r[pos]-r[posmax]));
+end
 
+"""
+    MFD(m::VectorModeFEM,theta::Real=0)
+
+Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
+"""
+function MFD(m::VectorModeFEM,theta::Real=0)
+    x=getindex.(m.Ω.grid.node_coordinates,1)
+    y=getindex.(m.Ω.grid.node_coordinates,2)
+    rmax=maximum(x*cosd(theta)+y*sind(theta))
+    rmin=minimum(x*cosd(theta)+y*sind(theta))
+    r=LinRange(rmin,rmax,10000)
+    Pzf=real(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx));
+    Pz=zeros(10000);
+    for i=1:10000
+        try
+            Pz[i]=Pzf(Point(r[i]*cosd(theta),r[i]*sind(theta)));
+        catch e
+            Pz[i]=0.0
+        end
+    end
+    posmax=argmax(abs.(Pz));
+    pos=argmin(abs.(abs.(Pz).-(maximum(abs.(Pz))/exp(2))));
+    return abs(2*(r[pos]-r[posmax]));
+end
 
 
 
