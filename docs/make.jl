@@ -9,7 +9,7 @@ ENV["GKSwstype"] = "100"
 makedocs(
     #bib,
     modules = [OpticalFibers],
-    format = Documenter.HTML(),
+    format = Documenter.HTML(assets=String["assets/citations.css"],),
     authors = "Olivier Vanvincq",
     sitename = "Opticalfibers.jl",
     pages = ["Home"=>"index.md","PhysicalData"=>"PhysicalData.md","ModeSolvers-Tutorial"=>"ModeSolvers-Tutorial.md","ModeSolvers-Solvers"=>"ModeSolvers-Solvers.md","ModeSolvers-Modes and Fields"=>"ModeSolvers.md","Bibliography"=>"Bibliography.md"],
