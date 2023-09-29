@@ -30,7 +30,7 @@ end
 function FEM1(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx_neff::Real;order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
     k2=(2*pi/lambda)^2;
     reffe = ReferenceFE(lagrangian,Float64,order);
-    V = TestFESpace(model,reffe,vector_type=Vector{Float64});
+    V = TestFESpace(model,reffe,conformity=:H1,vector_type=Vector{Float64});
     U = V;
     degree = 2*order;
     Ω = Triangulation(model);
