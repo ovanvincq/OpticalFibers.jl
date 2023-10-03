@@ -27,7 +27,7 @@ function FEM(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx_
 end
 
 
-function FEM1(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx_neff::Real;order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
+function FEM1(lambda::Real,mmax::Int64,epsi::Function,model::DiscreteModel,approx_neff::Real;order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
     k2=(2*pi/lambda)^2;
     reffe = ReferenceFE(lagrangian,Float64,order);
     V = TestFESpace(model,reffe,conformity=:H1,vector_type=Vector{Float64});
@@ -35,10 +35,10 @@ function FEM1(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx
     degree = 2*order;
     Ω = Triangulation(model);
     dΩ = Measure(Ω,degree);
-    a(u,v) = ∫( -∇(v)⋅∇(u) + k2*(v⋅(eps*u))  )*dΩ;
+    a(u,v) = ∫( -∇(v)⋅∇(u) + k2*(v⋅(epsi*u))  )*dΩ;
     b(u,v) = ∫(v⋅u  )dΩ;
-    A_task=assemble_matrix(a,U,V);
-    B_task=assemble_matrix(b,U,V);
+    A_task=Threads.@spawn assemble_matrix(a,U,V);
+    B_task=Threads.@spawn assemble_matrix(b,U,V);
     A=fetch(A_task);
     B=fetch(B_task);
     if (solver==:LU)
@@ -107,7 +107,7 @@ function computeH(Bt,Bz,invmu::tensor3)
     return (invmu1⋅Bt+invmu2*Bz)*1/mu0,(invmu3⋅Bt+invmu.zz*Bz)*1/mu0
 end
 
-function FEM2(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx_neff::Real;order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
+function FEM2(lambda::Real,mmax::Int64,epsi::Function,model::DiscreteModel,approx_neff::Real;order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
     k2=(2*pi/lambda)^2;
     reffe1 = ReferenceFE(nedelec,order)
     reffe2 = ReferenceFE(lagrangian,Float64,2*order)
@@ -120,10 +120,10 @@ function FEM2(lambda::Real,mmax::Int64,eps::Function,model::DiscreteModel,approx
     U = MultiFieldFESpace([U1, U2])
     degree = 4*order;
     dΩ = Measure(Ω,degree);
-    a((Et1,Ez1),(Et2,Ez2))=∫( -curl(Et2)⋅curl(Et1) + ∇(Ez2)⋅(Et1) + k2*(Et2⋅(eps*Et1)+Ez2*(eps*Ez1)) -∇(Ez1)⋅∇(Ez2) )*dΩ
+    a((Et1,Ez1),(Et2,Ez2))=∫( -curl(Et2)⋅curl(Et1) + ∇(Ez2)⋅(Et1) + k2*(Et2⋅(epsi*Et1)+Ez2*(epsi*Ez1)) -∇(Ez1)⋅∇(Ez2) )*dΩ
     b((Et1,Ez1),(Et2,Ez2)) = ∫( (Et2⋅Et1)-∇(Ez1)⋅(Et2) )*dΩ
-    A_task=assemble_matrix(a,U,V);
-    B_task=assemble_matrix(b,U,V);
+    A_task=Threads.@spawn assemble_matrix(a,U,V);
+    B_task=Threads.@spawn assemble_matrix(b,U,V);
     A=fetch(A_task);
     B=fetch(B_task);
     if (solver==:LU)
@@ -199,9 +199,9 @@ function FEM(lambda::Real,mmax::Int64,eps::tensor3,mu::tensor3,model::DiscreteMo
     b((Et1,Ez1),(Et2,Ez2))=∫( Et1⋅(tensor_C⋅(∇(Ez2)))-Et2⋅(tensor_B⋅(∇(Ez1)))+(vector_B1⋅Et1)*curl(Et2)+(vector_B2⋅Et2)*curl(Et1) )*dΩ
     c((Et1,Ez1),(Et2,Ez2))=∫( -(Et1⋅(tensor_C⋅Et2)) )*dΩ
 
-    A_task=assemble_matrix(a,U,V);
-    B_task=assemble_matrix(b,U,V);
-    C_task=assemble_matrix(c,U,V);
+    A_task=Threads.@spawn assemble_matrix(a,U,V);
+    B_task=Threads.@spawn assemble_matrix(b,U,V);
+    C_task=Threads.@spawn assemble_matrix(c,U,V);
     A=fetch(A_task);
     B=fetch(B_task);
     C=fetch(C_task);
