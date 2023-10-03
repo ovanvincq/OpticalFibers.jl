@@ -623,7 +623,7 @@ Returns the vector field due to the mode m after a propagation distance z
 """
 function VectorFieldFEM(m::VectorModeFEM,z::Real=0)
     p=exp(im*z*2*pi/m.lambda*m.neff);
-    VectorField(m.Ω,m.dΩ,m.Ex*p,m.Ey*p,m.Ez*p,m.Hx*p,m.Hy*p,m.Hz*p);
+    VectorFieldFEM(m.Ω,m.dΩ,m.Ex*p,m.Ey*p,m.Ez*p,m.Hx*p,m.Hy*p,m.Hz*p);
 end
 
 
@@ -748,6 +748,7 @@ function normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
             m.E=m.E*sqrt(2*mu0*c/m.neff/integral);
         end
     end
+    return
 end
 
 """
@@ -765,6 +766,7 @@ function normalize!(m::VectorModeFEM)
         m.Hy=m.Hy/sqrt(integral);
         m.Hz=m.Hz/sqrt(integral);
     end
+    return
 end
 
 ############################# Overlap #############################
@@ -968,6 +970,102 @@ function overlap(m1::VectorMode,f2::VectorField)
     return conj(overlap(f2,m1));
 end
 
+"""
+    overlap(m1::ScalarModeFEM,m2::ScalarModeFEM)
+"""
+function overlap(m1::ScalarModeFEM,m2::ScalarModeFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral1=sum(integrate(abs2(m1.E),m1.dΩ));
+        integral2=sum(integrate(abs2(m2.E),m2.dΩ));
+        integral=sum(integrate(m1.E*conj(m2.E),m2.dΩ));
+        return integral/sqrt(integral1*integral2);
+    end
+end
+
+"""
+    overlap(m1::ScalarModeFEM,m2::ScalarfieldFEM)
+"""
+function overlap(m1::ScalarModeFEM,m2::ScalarFieldFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral1=sum(integrate(abs2(m1.E),m1.dΩ));
+        integral=sum(integrate(m1.E*conj(m2.E),m2.dΩ));
+        return integral/sqrt(integral1);
+    end
+end
+
+"""
+    overlap(m1::ScalarModeFEM,m2::ScalarfieldFEM)
+"""
+function overlap(m1::ScalarFieldFEM,m2::ScalarModeFEM)
+    return conj(overlap(m2,m1))
+end
+
+"""
+    overlap(m1::ScalarFieldFEM,m2::ScalarfieldFEM)
+"""
+function overlap(m1::ScalarFieldFEM,m2::ScalarFieldFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral=sum(integrate(m1.E*conj(m2.E),m2.dΩ));
+        return integral
+    end
+end
+
+function overlap(m1::VectorModeFEM,m2::VectorModeFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral1_task=Threads.@spawn 0.5*abs(sum(integrate(m1.Ex*conj(m1.Hy)-m1.Ey*conj(m1.Hx),m1.dΩ)));
+        integral2_task=Threads.@spawn 0.5*abs(sum(integrate(m2.Ex*conj(m2.Hy)-m2.Ey*conj(m2.Hx),m2.dΩ)));
+        integral_task=Threads.@spawn 0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
+        integral1=fetch(integral1_task);
+        integral2=fetch(integral2_task);
+        integral=fetch(integral_task);
+        return integral/sqrt(integral1*integral2);
+    end
+end
+
+function overlap(m1::VectorModeFEM,m2::VectorFieldFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral1_task=Threads.@spawn 0.5*abs(sum(integrate(m1.Ex*conj(m1.Hy)-m1.Ey*conj(m1.Hx),m1.dΩ)));
+        integral_task=Threads.@spawn 0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
+        integral1=fetch(integral1_task);
+        integral=fetch(integral_task);
+        return integral/sqrt(integral1);
+    end
+end
+
+function overlap(m1::VectorFieldFEM,m2::VectorModeFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral2_task=Threads.@spawn 0.5*abs(sum(integrate(m2.Ex*conj(m2.Hy)-m2.Ey*conj(m2.Hx),m2.dΩ)));
+        integral_task =Threads.@spawn 0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
+        integral2=fetch(integral2_task);
+        integral=fetch(integral_task);
+        return integral/sqrt(integral2);
+    end
+end
+
+function overlap(m1::VectorFieldFEM,m2::VectorFieldFEM)
+    if (m1.Ω!=m2.Ω)
+        throw(ArgumentError("The modes must have the same triangulation Ω"));
+    else
+        integral=0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
+        return integral
+    end
+end
+
+
+
+
 ############################# Effective area #############################
 """
     Aeff(m::ScalarMode1D)
@@ -1024,8 +1122,10 @@ end
 Compute the effective area of the mode m. 
 """
 function Aeff(m::ScalarModeFEM)
-    E2=sum(integrate(abs2(m.E),m.dΩ));
-    E4=sum(integrate(abs2(abs2(m.E)),m.dΩ));
+    E2_task=Threads.@spawn sum(integrate(abs2(m.E),m.dΩ));
+    E4_task=Threads.@spawn sum(integrate(abs2(abs2(m.E)),m.dΩ));
+    E2=fetch(E2_task);
+    E4=fetch(E4_task);
     return E2^2/E4;
 end
 
@@ -1037,18 +1137,25 @@ If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guid
 """
 function Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
     #Approximation (real(neff)=n0)
-    E2=sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ));
     if isa(n0,Function)
         if (first(methods(n0)).nargs!=3)
             throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
         end
         n02=x->n0(x[1],x[2])^2;
-        E4_1=sum(integrate(n02*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
-        E4_2=sum(integrate(n02*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+        E2_task=Threads.@spawn sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ));
+        E4_1_task=Threads.@spawn sum(integrate(n02*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+        E4_2_task=Threads.@spawn sum(integrate(n02*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+        E2=fetch(E2_task);
+        E4_1=fetch(E4_1_task);
+        E4_2=fetch(E4_2_task);
         return real(E2)^2/E4_1*mu0/eps0,real(E2)^2/E4_2*mu0/eps0;
     else
-        E4_1=sum(integrate(abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
-        E4_2=sum(integrate(abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+        E2_task=Threads.@spawn sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ));
+        E4_1_task=Threads.@spawn sum(integrate(abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+        E4_2_task=Threads.@spawn sum(integrate(abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+        E2=fetch(E2_task);
+        E4_1=fetch(E4_1_task);
+        E4_2=fetch(E4_2_task);
         if (n0==0)
             return real(E2)^2/E4_1*mu0/eps0/(real(m.neff))^2,real(E2)^2/E4_2*mu0/eps0/(real(m.neff))^2;
         else
@@ -1150,8 +1257,10 @@ function nonLinearCoefficient(m::ScalarModeFEM,n2::Union{Real,Function})
             throw(DomainError(n2, "The non-linear index function must have 2 argument"));
         end
         n2bis=x->n2(x[1],x[2]);
-        E2=sum(integrate(abs2(m.E),m.dΩ));
-        E4=sum(integrate(n2bis*abs2(abs2(m.E)),m.dΩ));
+        E2_task=Threads.@spawn sum(integrate(abs2(m.E),m.dΩ));
+        E4_task=Threads.@spawn sum(integrate(n2bis*abs2(abs2(m.E)),m.dΩ));
+        E2=fetch(E2_task);
+        E4=fetch(E4_task);
         k0=2*pi/m.lambda;
         return E4/(E2^2)*k0;
     end
@@ -1170,7 +1279,6 @@ function nonLinearCoefficient(m::VectorModeFEM,n2::Union{Real,Function},n0::Unio
         if (first(methods(n2)).nargs!=3)
             throw(DomainError(n2, "The non-linear index n2 function must have 2 argument"));
         end
-        E2=real(sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ)));
         k0=2*pi/m.lambda;
         if (isa(n0,Real))
             if (n0==0)
@@ -1179,16 +1287,24 @@ function nonLinearCoefficient(m::VectorModeFEM,n2::Union{Real,Function},n0::Unio
                 nn=n0^2;
             end
             n2bis=x->n2(x[1],x[2]);
-            E4_1=sum(integrate(n2bis*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
-            E4_2=sum(integrate(n2bis*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+            E2_task=Threads.@spawn real(sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ)));
+            E4_1_task=Threads.@spawn sum(integrate(n2bis*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+            E4_2_task=Threads.@spawn sum(integrate(n2bis*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+            E2=fetch(E2_task);
+            E4_1=fetch(E4_1_task);
+            E4_2=fetch(E4_2_task);
             return 1.0/(E2^2/E4_1*mu0/eps0)*k0*nn,1.0/(E2^2/E4_2*mu0/eps0)*k0*nn;
         else
             if (first(methods(n0)).nargs!=3)
                 throw(DomainError(n0, "The refractive index n0 function must have 2 argument"));
             end
             n02n2=x->n2(x[1],x[2])*n0(x[1],x[2])^2;
-            E4_1=sum(integrate(n02n2*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
-            E4_2=sum(integrate(n02n2*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+            E2_task=Threads.@spawn real(sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ)));
+            E4_1_task=Threads.@spawn sum(integrate(n02n2*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
+            E4_2_task=Threads.@spawn sum(integrate(n02n2*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
+            E2=fetch(E2_task);
+            E4_1=fetch(E4_1_task);
+            E4_2=fetch(E4_2_task);
             return 1.0/(E2^2/E4_1*mu0/eps0)*k0,1.0/(E2^2/E4_2*mu0/eps0)*k0;
         end
     end
