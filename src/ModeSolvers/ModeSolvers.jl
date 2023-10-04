@@ -34,6 +34,7 @@ export MFD
 export Aeff
 export Interpolation
 export FEM
+export losses
 
 include("Mode_Field.jl")
 include("FD.jl")
