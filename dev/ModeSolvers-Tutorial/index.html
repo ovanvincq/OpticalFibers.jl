@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>ModeSolvers-Tutorial · Opticalfibers.jl</title><meta name="title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta property="og:title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta property="twitter:title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta name="description" content="Documentation for Opticalfibers.jl."/><meta property="og:description" content="Documentation for Opticalfibers.jl."/><meta property="twitter:description" content="Documentation for Opticalfibers.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/citations.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Opticalfibers.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../PhysicalData/">PhysicalData</a></li><li class="is-active"><a class="tocitem" href>ModeSolvers-Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Bimodal-Step-index-Fiber"><span>Bimodal Step-index Fiber</span></a></li><li><a class="tocitem" href="#Gradient-index-fiber"><span>Gradient index fiber</span></a></li><li><a class="tocitem" href="#Step-index-fiber-with-FEM"><span>Step-index fiber with FEM</span></a></li></ul></li><li><a class="tocitem" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers</a></li><li><a class="tocitem" href="../ModeSolvers/">ModeSolvers-Modes and Fields</a></li><li><a class="tocitem" href="../Bibliography/">Bibliography</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>ModeSolvers-Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>ModeSolvers-Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ovanvincq/OpticalFibers.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ovanvincq/OpticalFibers.jl/blob/main/docs/src/ModeSolvers-Tutorial.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="OpticalFibers.ModeSolvers-Tutorial"><a class="docs-heading-anchor" href="#OpticalFibers.ModeSolvers-Tutorial">OpticalFibers.ModeSolvers - Tutorial</a><a id="OpticalFibers.ModeSolvers-Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#OpticalFibers.ModeSolvers-Tutorial" title="Permalink"></a></h1><h2 id="Bimodal-Step-index-Fiber"><a class="docs-heading-anchor" href="#Bimodal-Step-index-Fiber">Bimodal Step-index Fiber</a><a id="Bimodal-Step-index-Fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Bimodal-Step-index-Fiber" title="Permalink"></a></h2><p>This section explains how to modelize a step-index fiber with a core radius <span>$a=2$</span> µm. The refractive index of the core is <span>$n_{\text{core}}=1.47$</span> and that of the cladding is <span>$n_{\text{cladding}}=1.45$</span>. </p><p>This fiber is bimodal at <span>$\lambda=1$</span> µm since the normalized frequency is <span>$V=\frac{2\pi a}{\lambda}\sqrt{n_{\text{core}}^2-n_{\text{cladding}}^2}=3.04$</span>. </p><p>To compute the two modes, we can use the fuction <code>multi_step_fiber_modes</code> that returns a vector of modes:</p><pre><code class="language-julia hljs">using OpticalFibers
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>ModeSolvers-Tutorial · Opticalfibers.jl</title><meta name="title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta property="og:title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta property="twitter:title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta name="description" content="Documentation for Opticalfibers.jl."/><meta property="og:description" content="Documentation for Opticalfibers.jl."/><meta property="twitter:description" content="Documentation for Opticalfibers.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/citations.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Opticalfibers.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../PhysicalData/">PhysicalData</a></li><li class="is-active"><a class="tocitem" href>ModeSolvers-Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Bimodal-Step-index-Fiber"><span>Bimodal Step-index Fiber</span></a></li><li><a class="tocitem" href="#Gradient-index-fiber"><span>Gradient index fiber</span></a></li><li><a class="tocitem" href="#FEM:-Step-index-fiber"><span>FEM: Step-index fiber</span></a></li><li><a class="tocitem" href="#FEM:-Photonic-Crystal-Fiber"><span>FEM: Photonic Crystal Fiber</span></a></li></ul></li><li><a class="tocitem" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers</a></li><li><a class="tocitem" href="../ModeSolvers/">ModeSolvers-Modes and Fields</a></li><li><a class="tocitem" href="../Bibliography/">Bibliography</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>ModeSolvers-Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>ModeSolvers-Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/ovanvincq/OpticalFibers.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/ovanvincq/OpticalFibers.jl/blob/main/docs/src/ModeSolvers-Tutorial.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="OpticalFibers.ModeSolvers-Tutorial"><a class="docs-heading-anchor" href="#OpticalFibers.ModeSolvers-Tutorial">OpticalFibers.ModeSolvers - Tutorial</a><a id="OpticalFibers.ModeSolvers-Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#OpticalFibers.ModeSolvers-Tutorial" title="Permalink"></a></h1><h2 id="Bimodal-Step-index-Fiber"><a class="docs-heading-anchor" href="#Bimodal-Step-index-Fiber">Bimodal Step-index Fiber</a><a id="Bimodal-Step-index-Fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Bimodal-Step-index-Fiber" title="Permalink"></a></h2><p>This section explains how to modelize a step-index fiber with a core radius <span>$a=2$</span> µm. The refractive index of the core is <span>$n_{\text{core}}=1.47$</span> and that of the cladding is <span>$n_{\text{cladding}}=1.45$</span>. </p><p>This fiber is bimodal at <span>$\lambda=1$</span> µm since the normalized frequency is <span>$V=\frac{2\pi a}{\lambda}\sqrt{n_{\text{core}}^2-n_{\text{cladding}}^2}=3.04$</span>. </p><p>To compute the two modes, we can use the fuction <code>multi_step_fiber_modes</code> that returns a vector of modes:</p><pre><code class="language-julia hljs">using OpticalFibers
 using OpticalFibers.ModeSolvers
 m0=multi_step_fiber_modes(1,0,2,[1.47,1.45],maxPosition=10);
 m01=m0[1]
@@ -8,10 +8,10 @@ m11=m1[1]</code></pre><p>Note that you can also use broadcasting to compute all 
 m01=m[1][1];
 m11=m[2][1];</code></pre><p>It is possible to plot the mode profile:</p><pre><code class="language-julia hljs">using Plots
 plot(m01.r,m01.E,label=m01.Name)
-plot!(m11.r,m11.E,label=m11.Name)</code></pre><img src="e67997d6.svg" alt="Example block output"/><p>In order to visualize the modes in a 2D plot, one should use the conversion from <code>ScalarMode1D</code> to <code>ScalarMode2D</code>. Be careful when using <code>Plots.jl</code>: unlike this package, the second index of the matrix corresponds to the x-coordinate (as matlab but the opposite of <code>Makie.jl</code>).</p><pre><code class="language-julia hljs">mm01=ScalarMode2D(m01);
+plot!(m11.r,m11.E,label=m11.Name)</code></pre><img src="af56bc23.svg" alt="Example block output"/><p>In order to visualize the modes in a 2D plot, one should use the conversion from <code>ScalarMode1D</code> to <code>ScalarMode2D</code>. Be careful when using <code>Plots.jl</code>: unlike this package, the second index of the matrix corresponds to the x-coordinate (as matlab but the opposite of <code>Makie.jl</code>).</p><pre><code class="language-julia hljs">mm01=ScalarMode2D(m01);
 mm11s=ScalarMode2D(m11,sincos=&#39;s&#39;);
 mm11c=ScalarMode2D(m11,sincos=&#39;c&#39;);
-contourf(mm11c.x,mm11c.y,mm11c.E&#39;,levels=100,linewidth=0)</code></pre><img src="0b2130b5.svg" alt="Example block output"/><p>To observe the beating between the LP01 and the LP11, the modes must be first normalized. Then, the addition of the two fields at the distance z ∈ [0,214] µm is required. The beating length is <span>$\frac{2\pi}{\vert \Delta \beta \vert} = \frac{\lambda}{\vert \Delta n_{eff} \vert}= 107$</span> µm</p><pre><code class="language-julia hljs">normalize!(mm01)
+contourf(mm11c.x,mm11c.y,mm11c.E&#39;,levels=100,linewidth=0)</code></pre><img src="f2dc3d36.svg" alt="Example block output"/><p>To observe the beating between the LP01 and the LP11, the modes must be first normalized. Then, the addition of the two fields at the distance z ∈ [0,214] µm is required. The beating length is <span>$\frac{2\pi}{\vert \Delta \beta \vert} = \frac{\lambda}{\vert \Delta n_{eff} \vert}= 107$</span> µm</p><pre><code class="language-julia hljs">normalize!(mm01)
 normalize!(mm11c)
 normalize!(mm11s)
 L=1/(m01.neff-m11.neff)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">106.89413338381357</code></pre><pre><code class="language-julia hljs">anim=@animate for j=0:214
@@ -28,14 +28,14 @@ gif(anim,&quot;anim_field.gif&quot;,fps=15)</code></pre><img src="e640628f.gif" 
  [&quot;HE 2,1a&quot;,1.4537386807206427,1.0,[-10.0,10.0],[-10.0,10.0],[-8.183586213971765,8.183586213971765],[-8.183586213971765,8.183586213971765],[-0.9999752349350604,0.9999752349350604],[-0.03199511348865891,0.03199511348865891],[-0.03199511348865891,0.03199511348865891],[-0.0037587703512342654,0.0037587703512342654]]</code></pre><p>Then, the Poynting Vector of the mode HE<span>$_{21}$</span> can be computed and plotted:</p><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(mv2[1]);
 contourf(mv2[1].x,mv2[1].y,Pz&#39;,linewidth=0,levels=100,xlims=(-4,4),ylims=(-4,4))
 X,Y=meshgrid(mv2[1].x,mv2[1].y);
-quiver!(X[5:5:end,5:5:end],Y[5:5:end,5:5:end],quiver=(mv2[1].Ex[5:5:end,5:5:end]&#39;/20,mv2[1].Ey[5:5:end,5:5:end]&#39;/20),color=:cyan,arrow=arrow(:closed))</code></pre><img src="20dd8ceb.svg" alt="Example block output"/><h2 id="Gradient-index-fiber"><a class="docs-heading-anchor" href="#Gradient-index-fiber">Gradient index fiber</a><a id="Gradient-index-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-index-fiber" title="Permalink"></a></h2><p>In this tutorial, a germanium-doped parabolic gradient index fiber will be studied. The maximum Ge concentration is 20% and the core radius is 3.5 µm. The silica dispersion will be taken into account.</p><p>First, a vector of <code>Function</code> is created to modelized the dispersive refractive index profile between 1 and 1.5 µm:</p><pre><code class="language-julia hljs">using OpticalFibers
+quiver!(X[5:5:end,5:5:end],Y[5:5:end,5:5:end],quiver=(mv2[1].Ex[5:5:end,5:5:end]&#39;/20,mv2[1].Ey[5:5:end,5:5:end]&#39;/20),color=:cyan,arrow=arrow(:closed))</code></pre><img src="97eb5b12.svg" alt="Example block output"/><h2 id="Gradient-index-fiber"><a class="docs-heading-anchor" href="#Gradient-index-fiber">Gradient index fiber</a><a id="Gradient-index-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-index-fiber" title="Permalink"></a></h2><p>In this tutorial, a germanium-doped parabolic gradient index fiber will be studied. The maximum Ge concentration is 20% and the core radius is 3.5 µm. The silica dispersion will be taken into account.</p><p>First, a vector of <code>Function</code> is created to modelized the dispersive refractive index profile between 1 and 1.5 µm:</p><pre><code class="language-julia hljs">using OpticalFibers
 using OpticalFibers.PhysicalData
 using Plots
 lambda=1:0.01:1.5;
 f=[r-&gt;n_Ge_Doped_Silica(l*1e-6,0)+(n_Ge_Doped_Silica(l*1e-6,0.2)-n_Ge_Doped_Silica(l*1e-6,0))*(r&lt;=3.5)*(1-r^2/3.5^2) for l in lambda];
 r=0:0.1:5;
 plot(r,f[1].(r),label=&quot;λ = 1 µm&quot;,xlabel=&quot;r (µm)&quot;,ylabel=&quot;Refractive index&quot;);
-plot!(r,f[end].(r),label=&quot;λ = 1.5 µm&quot;)</code></pre><img src="113c36f1.svg" alt="Example block output"/><p>The modal content is then computed:</p><pre><code class="language-julia hljs">using OpticalFibers.ModeSolvers
+plot!(r,f[end].(r),label=&quot;λ = 1.5 µm&quot;)</code></pre><img src="0235c381.svg" alt="Example block output"/><p>The modal content is then computed:</p><pre><code class="language-julia hljs">using OpticalFibers.ModeSolvers
 m=FD.(lambda,[0,1,2]&#39;,2,f,1000,10);
 #mode LP01 always exists
 neff01=[m[j,1][1].neff for j in 1:length(lambda)];
@@ -47,26 +47,176 @@ N21=sum((length.(m[:,3])).&gt;=1);
 neff21=[m[j,3][1].neff for j in 1:N21];
 plot(lambda,n_Ge_Doped_Silica.(lambda*1E-6,0),label=&quot;Silica&quot;,xlabel=&quot;λ (µm)&quot;,ylabel=&quot;Effective index&quot;,color=:black);
 plot!(lambda,n_Ge_Doped_Silica.(lambda*1E-6,0.2),label=&quot;Ge-doped Silica (20%)&quot;,color=:black,line=:dash);
-plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=[&quot;LP01&quot; &quot;LP11&quot; &quot;LP02&quot; &quot;LP21&quot;])</code></pre><img src="b05bfe42.svg" alt="Example block output"/><p>The second-order dispersion is defined by <span>$\beta_2=\frac{\partial^2 \beta}{\partial \omega^2}$</span>.</p><pre><code class="language-julia hljs">beta01=neff01*2*pi./lambda*1E6;
+plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=[&quot;LP01&quot; &quot;LP11&quot; &quot;LP02&quot; &quot;LP21&quot;])</code></pre><img src="fb2b3ce3.svg" alt="Example block output"/><p>The second-order dispersion is defined by <span>$\beta_2=\frac{\partial^2 \beta}{\partial \omega^2}$</span>.</p><pre><code class="language-julia hljs">beta01=neff01*2*pi./lambda*1E6;
 omega=2*pi*OpticalFibers.PhysicalData.c./lambda*1E6;
 omega2,beta2=derivative((omega,beta01),2);
 lambda2=2*pi*OpticalFibers.PhysicalData.c./omega2*1E6;
-plot(lambda2,beta2*1E26,xlabel=&quot;λ (µm)&quot;,ylabel=&quot;β₂ (10⁻²⁶ s²/m)&quot;)</code></pre><img src="f2373a13.svg" alt="Example block output"/><p>To compute the effective area and the non-linear coefficient, the fields must be calculated:</p><pre><code class="language-julia hljs">m=FD.(lambda,0,1,f,1000,10,field=true);
+plot(lambda2,beta2*1E26,xlabel=&quot;λ (µm)&quot;,ylabel=&quot;β₂ (10⁻²⁶ s²/m)&quot;)</code></pre><img src="0eb6b706.svg" alt="Example block output"/><p>To compute the effective area and the non-linear coefficient, the fields must be calculated:</p><pre><code class="language-julia hljs">m=FD.(lambda,0,1,f,1000,10,field=true);
 m=[m[i][1] for i in 1:length(lambda)];
 A=Aeff.(m);
 gamma=nonLinearCoefficient.(m,2.53E-20)*1E21;
 plot(lambda,A,label=&quot;Aeff&quot;,ylabel=&quot;Effective area (µm²)&quot;,xlabel=&quot;λ (µm)&quot;,color=:blue,leg=:topright);
-plot!(twinx(),lambda,gamma,label=&quot;γ&quot;,ylabel=&quot;Non-linear coefficient ((W.km)⁻¹)&quot;,color=:red,leg=:topleft)</code></pre><img src="dd7960ee.svg" alt="Example block output"/><h2 id="Step-index-fiber-with-FEM"><a class="docs-heading-anchor" href="#Step-index-fiber-with-FEM">Step-index fiber with FEM</a><a id="Step-index-fiber-with-FEM-1"></a><a class="docs-heading-anchor-permalink" href="#Step-index-fiber-with-FEM" title="Permalink"></a></h2><pre><code class="language-julia hljs">using OpticalFibers
+plot!(twinx(),lambda,gamma,label=&quot;γ&quot;,ylabel=&quot;Non-linear coefficient ((W.km)⁻¹)&quot;,color=:red,leg=:topleft)</code></pre><img src="a619b6d3.svg" alt="Example block output"/><h2 id="FEM:-Step-index-fiber"><a class="docs-heading-anchor" href="#FEM:-Step-index-fiber">FEM: Step-index fiber</a><a id="FEM:-Step-index-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#FEM:-Step-index-fiber" title="Permalink"></a></h2><p>As an example, we will compute the five first vector modes in a step-index fiber with a 1 µm-core radius, a refractive index of <span>$\sqrt{3}$</span> in the core and 1 in the cladding. The mesh was generated with GMSH.</p><pre><code class="language-julia hljs">using OpticalFibers
 using OpticalFibers.ModeSolvers
 using Gridap
 using GridapGmsh
-using GLMakie
 using GridapMakie
+using GLMakie
 model = GmshDiscreteModel(&quot;../../models/Step_index_fiber.msh&quot;);
 permittivity=x-&gt;1+2*(x[1]^2+x[2]^2&lt;=1);
 m=FEM(1,5,permittivity,model,sqrt(3),order=2,solver=:MUMPS,field=true,type=:Vector);
-MFD(m[1])</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1.5398856758065937</code></pre><p>It is possible to plot the z-component of the Poynting Vector:</p><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(m[1]);
+fig,ax,plot_obj=wireframe(m[1].Ω, color=:black, linewidth=2,axis=(aspect=DataAspect(),))
+ax.xlabel=&quot;x (µm)&quot;;
+ax.ylabel=&quot;y (µm)&quot;;</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">Info    : Reading &#39;../../models/Step_index_fiber.msh&#39;...
+Info    : 7 entities
+Info    : 5178 nodes
+Info    : 10454 elements
+Info    : Done reading &#39;../../models/Step_index_fiber.msh&#39;</code></pre><p><img src="../FEM1_mesh.png" alt="Pz for FM computed with FEM"/></p><p>Now we can plot the z-component of the Poynting Vector with the package GridapMakie.jl (it is also possible to save the field in a vtk file with the funcion <code>writevtk</code> implemented in Gridap.jl and open it with ParaView):</p><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(m[1]);
 fig,ax,plot_obj=GLMakie.plot(m[1].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
 ax.xlabel=&quot;x (µm)&quot;;
 ax.ylabel=&quot;y (µm)&quot;;
-ax.title=&quot;neff = &quot;*&quot;$(real(m[1].neff))&quot;;</code></pre><p><img src="../FEM.png" alt="Pz for FM computed with FEM"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../PhysicalData/">« PhysicalData</a><a class="docs-footer-nextpage" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Friday 29 September 2023 18:42">Friday 29 September 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+ax.title=&quot;neff = $(real(m[1].neff))&quot;;
+Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM1_Pz.png" alt="Pz for FM computed with FEM"/></p><h2 id="FEM:-Photonic-Crystal-Fiber"><a class="docs-heading-anchor" href="#FEM:-Photonic-Crystal-Fiber">FEM: Photonic Crystal Fiber</a><a id="FEM:-Photonic-Crystal-Fiber-1"></a><a class="docs-heading-anchor-permalink" href="#FEM:-Photonic-Crystal-Fiber" title="Permalink"></a></h2><p>This example is more complex since, in a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begin at 8 µm from the core and its thickness is 2 µm.  <img src="./assets/PCF.png" alt="PCF mesh"/> First, the mesh is loaded:</p><pre><code class="language-julia hljs">using OpticalFibers
+using OpticalFibers.ModeSolvers
+using Gridap
+using GridapGmsh
+using GridapMakie
+using GLMakie
+model = GmshDiscreteModel(&quot;../../models/PCF.msh&quot;);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">UnstructuredDiscreteModel()</code></pre><p>Then we define the functions useful in the construction of the permittivity and permeability tensors:</p><pre><code class="language-julia hljs">const alpha=10.0;
+const r_pml=8.0;
+const d_pml=2.0;
+const r_hole=0.75;
+const eps3=1.45^2;
+const Pitch=2;
+x1,y1=ring(1);
+x2,y2=ring(2);
+x3,y3=ring(3);
+xc=[x1;x2;x3]*Pitch;
+yc=[y1;y2;y3]*Pitch;
+function eps_xx(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        for i=1:length(xc)
+            rc=hypot(x[1]-xc[i],x[2]-yc[i]);
+            if rc&lt;r_hole
+                return ComplexF64(1.0);
+            end
+        end
+        return ComplexF64(eps3);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*(rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
+    end
+end
+function eps_yy(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        for i=1:length(xc)
+            rc=hypot(x[1]-xc[i],x[2]-yc[i]);
+            if rc&lt;r_hole
+                return ComplexF64(1.0);
+            end
+        end
+        return ComplexF64(eps3);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*(rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
+    end
+end
+function eps_zz(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        for i=1:length(xc)
+            rc=hypot(x[1]-xc[i],x[2]-yc[i]);
+            if rc&lt;r_hole
+                return ComplexF64(1.0);
+            end
+        end
+        return ComplexF64(eps3);
+    else
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*(rt/r)*sr;
+    end
+end
+function eps_xy(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        return ComplexF64(0.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
+    end
+end
+function mu_xx(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        return ComplexF64(1.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return (rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
+    end
+end
+
+function mu_yy(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        return ComplexF64(1.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return (rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
+    end
+end
+
+function mu_zz(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        return ComplexF64(1.0);
+    else
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return (rt/r)*sr;
+    end
+end
+
+function mu_xy(x)
+    r=hypot(x[1],x[2]);
+    if r&lt;=r_pml
+        return ComplexF64(0.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
+    end
+end
+function zf(x)
+    return ComplexF64(0.0)
+end
+epsilon=tensor3(eps_xx,eps_xy,zf,eps_xy,eps_yy,zf,zf,zf,eps_zz);
+mu=tensor3(mu_xx,mu_xy,zf,mu_xy,mu_yy,zf,zf,zf,mu_zz);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">tensor3(Main.mu_xx, Main.mu_xy, Main.zf, Main.mu_xy, Main.mu_yy, Main.zf, Main.zf, Main.zf, Main.mu_zz)</code></pre><p>Then we can compute ten modes whose effectif index is close to 1.41 at the wavelength of 1.3 µm and plot the z-component of the Poynting Vector of the interesting mode:</p><pre><code class="language-julia hljs">m=FEM(1.3,10,epsilon,mu,model,1.41,field=true,order=2,solver=:MUMPS)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{OpticalFibers.ModeSolvers.VectorModeFEM}:
+ [Mode 1,1.4141255228509635 - 0.025549123252595642im,1.3,yes]
+ [Mode 2,1.4141290763824401 - 0.025533989183686184im,1.3,yes]
+ [Mode 3,1.417046491409884 - 0.02605027655001724im,1.3,yes]
+ [Mode 4,1.4224418699464012 - 0.02282506821483821im,1.3,yes]
+ [Mode 5,1.4226689167134496 - 0.022746442427532217im,1.3,yes]
+ [Mode 6,1.4228749618462668 - 0.022516194354603312im,1.3,yes]
+ [Mode 7,1.4228866667830928 - 0.022498800096839064im,1.3,yes]
+ [Mode 8,1.4292044848492678 - 0.018898594331062214im,1.3,yes]
+ [Mode 9,1.413487297118587 - 4.3326053789846944e-14im,1.3,yes]
+ [Mode 10,1.4134860520873687 - 4.341389769231909e-14im,1.3,yes]</code></pre><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(m[end]);
+fig,ax,plot_obj=GLMakie.plot(m[end].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
+ax.xlabel=&quot;x (µm)&quot;;
+ax.ylabel=&quot;y (µm)&quot;;
+ax.title=&quot;neff = $(m[end].neff)&quot;;
+Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM2_Pz.png" alt="Pz for FM computed with FEM"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../PhysicalData/">« PhysicalData</a><a class="docs-footer-nextpage" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.1.0 on <span class="colophon-date" title="Wednesday 4 October 2023 15:10">Wednesday 4 October 2023</span>. Using Julia version 1.9.3.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
