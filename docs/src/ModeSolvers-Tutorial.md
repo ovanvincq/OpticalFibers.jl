@@ -136,26 +136,187 @@ plot(lambda,A,label="Aeff",ylabel="Effective area (µm²)",xlabel="λ (µm)",col
 plot!(twinx(),lambda,gamma,label="γ",ylabel="Non-linear coefficient ((W.km)⁻¹)",color=:red,leg=:topleft)
 ```
 
-## Step-index fiber with FEM
+## FEM: Step-index fiber
+As an example, we will compute the five first vector modes in a step-index fiber with a 1 µm-core radius, a refractive index of $\sqrt{3}$ in the core and 1 in the cladding. The mesh was generated with GMSH.
 ```@example 3
 using OpticalFibers
 using OpticalFibers.ModeSolvers
 using Gridap
 using GridapGmsh
-using GLMakie
 using GridapMakie
+using GLMakie
 model = GmshDiscreteModel("../../models/Step_index_fiber.msh");
 permittivity=x->1+2*(x[1]^2+x[2]^2<=1);
 m=FEM(1,5,permittivity,model,sqrt(3),order=2,solver=:MUMPS,field=true,type=:Vector);
-MFD(m[1])
+fig,ax,plot_obj=wireframe(m[1].Ω, color=:black, linewidth=2,axis=(aspect=DataAspect(),))
+ax.xlabel="x (µm)";
+ax.ylabel="y (µm)";
+save("FEM1_mesh.png",fig); nothing #hide
 ```
-It is possible to plot the z-component of the Poynting Vector:
+![Pz for FM computed with FEM](FEM1_mesh.png)
+
+Now we can plot the z-component of the Poynting Vector with the package GridapMakie.jl (it is also possible to save the field in a vtk file with the funcion `writevtk` implemented in Gridap.jl and open it with ParaView):
 ```@example 3
 Px,Py,Pz=PoyntingVector(m[1]);
 fig,ax,plot_obj=GLMakie.plot(m[1].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
 ax.xlabel="x (µm)";
 ax.ylabel="y (µm)";
-ax.title="neff = "*"$(real(m[1].neff))";
-save("FEM.png",fig); nothing #hide
+ax.title="neff = $(real(m[1].neff))";
+Colorbar(fig[1,2], plot_obj);
+save("FEM1_Pz.png",fig); nothing #hide
 ```
-![Pz for FM computed with FEM](FEM.png)
+![Pz for FM computed with FEM](FEM1_Pz.png)
+
+## FEM: Photonic Crystal Fiber
+This example is more complex since, in a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begin at 8 µm from the core and its thickness is 2 µm. 
+![PCF mesh](./assets/PCF.png)
+First, the mesh is loaded:
+```@example 4
+using OpticalFibers
+using OpticalFibers.ModeSolvers
+using Gridap
+using GridapGmsh
+using GridapMakie
+using GLMakie
+model = GmshDiscreteModel("../../models/PCF.msh");
+```
+Then we define the functions useful in the construction of the permittivity and permeability tensors:
+```@example 4
+const alpha=10.0;
+const r_pml=8.0;
+const d_pml=2.0;
+const r_hole=0.75;
+const eps3=1.45^2;
+const Pitch=2;
+x1,y1=ring(1);
+x2,y2=ring(2);
+x3,y3=ring(3);
+xc=[x1;x2;x3]*Pitch;
+yc=[y1;y2;y3]*Pitch;
+function eps_xx(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        for i=1:length(xc)
+            rc=hypot(x[1]-xc[i],x[2]-yc[i]);
+            if rc<r_hole
+                return ComplexF64(1.0);
+            end
+        end
+        return ComplexF64(eps3);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*(rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
+    end
+end
+function eps_yy(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        for i=1:length(xc)
+            rc=hypot(x[1]-xc[i],x[2]-yc[i]);
+            if rc<r_hole
+                return ComplexF64(1.0);
+            end
+        end
+        return ComplexF64(eps3);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*(rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
+    end
+end
+function eps_zz(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        for i=1:length(xc)
+            rc=hypot(x[1]-xc[i],x[2]-yc[i]);
+            if rc<r_hole
+                return ComplexF64(1.0);
+            end
+        end
+        return ComplexF64(eps3);
+    else
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*(rt/r)*sr;
+    end
+end
+function eps_xy(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        return ComplexF64(0.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return eps3*sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
+    end
+end
+function mu_xx(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        return ComplexF64(1.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return (rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
+    end
+end
+
+function mu_yy(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        return ComplexF64(1.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return (rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
+    end
+end
+
+function mu_zz(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        return ComplexF64(1.0);
+    else
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return (rt/r)*sr;
+    end
+end
+
+function mu_xy(x)
+    r=hypot(x[1],x[2]);
+    if r<=r_pml
+        return ComplexF64(0.0);
+    else
+        phi=atan(x[2],x[1]);
+        rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+        sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+        return sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
+    end
+end
+function zf(x)
+    return ComplexF64(0.0)
+end
+epsilon=tensor3(eps_xx,eps_xy,zf,eps_xy,eps_yy,zf,zf,zf,eps_zz);
+mu=tensor3(mu_xx,mu_xy,zf,mu_xy,mu_yy,zf,zf,zf,mu_zz);
+```
+Then we can compute ten modes whose effectif index is close to 1.41 at the wavelength of 1.3 µm and plot the z-component of the Poynting Vector of the interesting mode:
+```@example 4
+m=FEM(1.3,10,epsilon,mu,model,1.41,field=true,order=2,solver=:MUMPS)
+```
+```@example 4
+Px,Py,Pz=PoyntingVector(m[end]);
+fig,ax,plot_obj=GLMakie.plot(m[end].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
+ax.xlabel="x (µm)";
+ax.ylabel="y (µm)";
+ax.title="neff = $(m[end].neff)";
+Colorbar(fig[1,2], plot_obj);
+save("FEM2_Pz.png",fig); nothing #hide
+```
+![Pz for FM computed with FEM](FEM2_Pz.png)
