@@ -383,6 +383,18 @@ function writevtk(name::String,m::VectorModeFEM)
     end
     return nothing;
 end
+
+############################# Mode conversion #############################
+"""
+    losses(m::Mode)
+
+Return the losses of a mode in dB/km if the wavelength is in meters.  
+If the wavelength is in microns, you have to multiply the result by 1E6 to obtain the losses in dB/km.  
+"""
+function losses(m::Mode)
+    return -4*pi/m.lambda*imag(m.neff)*10/log(10)*1000
+end
+
 ############################# Mode conversion #############################
 
 """
@@ -1367,7 +1379,7 @@ function MFD(m::ScalarModeFEM,theta::Real=0)
     rmin=minimum(x*cosd(theta)+y*sind(theta))
     r=LinRange(rmin,rmax,10000)
     E=zeros(10000);
-    for i=1:10000
+    Threads.@threads for i=1:10000
         try
             E[i]=m.E(Point(r[i]*cosd(theta),r[i]*sind(theta)));
         catch e
@@ -1392,7 +1404,7 @@ function MFD(m::VectorModeFEM,theta::Real=0)
     r=LinRange(rmin,rmax,10000)
     Pzf=real(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx));
     Pz=zeros(10000);
-    for i=1:10000
+    Threads.@threads for i=1:10000
         try
             Pz[i]=Pzf(Point(r[i]*cosd(theta),r[i]*sind(theta)));
         catch e
