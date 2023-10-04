@@ -6,10 +6,7 @@ Abstract structure to describe an electromagnetic field
 `abstract type Field end`
 """
 abstract type Field end
-Base.:length(f::Field) = 1;
-Base.:iterate(f::Field) = (f,nothing);
-Base.:iterate(f::Field,nothing) = nothing;
-
+Broadcast.:broadcastable(f::Field)=Ref(f)
 
 """
 Structure describing a 2D scalar field in cartesian coordinates
@@ -195,9 +192,7 @@ Abstract structure to describe an optical fiber mode
 `abstract type Mode end`
 """
 abstract type Mode end
-Base.:length(f::Mode) = 1;
-Base.:iterate(f::Mode) = (f,nothing);
-Base.:iterate(f::Mode,nothing) = nothing;
+Broadcast.:broadcastable(f::Mode)=Ref(f)
 
 """
 Structure describing a scalar mode of an optical fiber with a revolution symmetry
