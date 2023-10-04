@@ -9,6 +9,8 @@ using FastGaussQuadrature;
 export piecewiseIndex
 export meshgrid
 export derivative
+export ring
+export tensor3
 
 """
     piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
@@ -103,11 +105,36 @@ function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
 end
 
 function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}},order::Int64)
+    if (order<0)
+        throw(ArgumentError("The order must be positive"));
+    end
     temp=t;
     for j=1:order
         temp=derivative(temp);
     end
     return temp;
+end
+
+function ring(N::Int)
+    z=zeros(2,6*N+1);
+    z[1,2:N+1].=-0.5;
+    z[1,N+2:2*N+1].=-1.0;
+    z[1,2*N+2:3*N+1].=-0.5;
+    z[1,3*N+2:6*N+1].=-z[1,2:3*N+1];
+    z[2,2:N+1].=sqrt(3)/2;
+    z[2,2*N+2:3*N+1].=-sqrt(3)/2;
+    z[2,3*N+2:6*N+1].=-z[2,2:3*N+1];
+    VX=0.0;
+    VY=0.0;
+    x=zeros(6*N);
+    y=zeros(6*N);
+    for k=1:6*N
+        VX=VX+z[1,k];
+        VY=VY+z[2,k];
+        x[k]=N+VX;
+        y[k]=VY;
+    end
+    x,y
 end
 
 struct ShiftAndInvert_MUMPS
