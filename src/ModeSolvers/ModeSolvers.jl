@@ -7,7 +7,6 @@ using SparseArrays;
 using Arpack;
 using SpecialFunctions;
 using Gridap;
-using GridapGmsh;
 using Gridap.Fields
 using Gridap.Geometry
 using Gridap.TensorValues
