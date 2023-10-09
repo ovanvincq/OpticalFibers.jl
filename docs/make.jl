@@ -12,7 +12,7 @@ makedocs(
     format = Documenter.HTML(assets=String["assets/citations.css"],),
     authors = "Olivier Vanvincq",
     sitename = "Opticalfibers.jl",
-    pages = ["Home"=>"index.md","PhysicalData"=>"PhysicalData.md","ModeSolvers-Tutorial"=>"ModeSolvers-Tutorial.md","ModeSolvers-Solvers"=>"ModeSolvers-Solvers.md","ModeSolvers-Modes and Fields"=>"ModeSolvers.md","Bibliography"=>"Bibliography.md"],
+    pages = ["Home"=>"index.md","Common functions"=>"Common.md","PhysicalData"=>"PhysicalData.md","ModeSolvers-Tutorial"=>"ModeSolvers-Tutorial.md","ModeSolvers-Solvers"=>"ModeSolvers-Solvers.md","ModeSolvers-Modes and Fields"=>"ModeSolvers.md","Bibliography"=>"Bibliography.md"],
     plugins=[bib],
     #remotes = nothing,
     #checkdocs=:none,
