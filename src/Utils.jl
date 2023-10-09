@@ -11,6 +11,7 @@ export meshgrid
 export derivative
 export ring
 export tensor3
+export inverse
 
 """
     piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
@@ -52,7 +53,7 @@ function sdiff1(M::Integer)
     return sparse([ [1.0 zeros(1,M-1)]; diagm(1=>ones(M-1)) - Matrix(I,M,M) ])
 end
 
-function Laplacian(Nx, Ny, dx, dy)
+function Laplacian(Nx::Integer, Ny::Integer, dx::Real, dy::Real)
    Dx = sdiff1(Nx) / dx
    Dy = sdiff1(Ny) / dy
    Ax = Dx' * Dx
@@ -94,7 +95,11 @@ function indexGaussSampling2D(xmax::Real,ymax::Real,nbx::Integer,nby::Integer,or
     return x,y,n;
 end
 
+"""
+    derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
 
+Function that returns the derivative of the tuple t=(x,y)
+"""
 function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
     if (length(t[1])!=length(t[2]))
         throw(ArgumentError("x and y must have the same length"));
@@ -104,6 +109,11 @@ function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
     return xp,yp;
 end
 
+"""
+    derivative(t::Tuple{Vector{<:Real},Vector{<:Number}},order::Int64)
+
+Function that returns the nth order derivative of the tuple t=(x,y) 
+"""
 function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}},order::Int64)
     if (order<0)
         throw(ArgumentError("The order must be positive"));
@@ -115,7 +125,12 @@ function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}},order::Int64)
     return temp;
 end
 
-function ring(N::Int)
+"""
+    ring(N::Integer)
+
+Function that returns a tuple of vectors containing the coordinates (x,y) of the holes in the Nth ring of a PCF
+"""
+function ring(N::Integer)
     z=zeros(2,6*N+1);
     z[1,2:N+1].=-0.5;
     z[1,N+2:2*N+1].=-1.0;
@@ -196,6 +211,21 @@ function eigs_LU(A;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=100)
     eigs_LU(A,SparseMatrixCSC(I,size(A,1),size(A,2));sigma=sigma,nev=nev,tol=tol,restarts=restarts)
 end
 
+"""
+    tensor
+
+Structure that describes a tensor of permittivity or permeability. Each of the 9 components of the a `tensor3` is a function of a tuple (x,y).
+
+- xx :: `Function`
+- yx :: `Function`
+- zx :: `Function`
+- xy :: `Function`
+- yy :: `Function`
+- zy :: `Function`
+- xz :: `Function`
+- yz :: `Function`
+- zz :: `Function`
+"""
 struct tensor3
     xx::Function
     yx::Function
@@ -208,16 +238,83 @@ struct tensor3
     zz::Function
 end
 
-function tensor3(fxx::Function,fyy::Function,fzz::Function)
-    z=x->0;
-    return tensor3(fxx,z,z,z,fyy,z,z,z,fzz)
+"""
+    tensor3(xx::Union{Function,Number},yx::Union{Function,Number},zx::Union{Function,Number},xy::Union{Function,Number},yy::Union{Function,Number},zy::Union{Function,Number},xz::Union{Function,Number},yz::Union{Function,Number},zz::Union{Function,Number})
+
+Function that returns a tensor3 defined with functions and constant values. Each function must always return the same type.
+"""
+function tensor3(xx::Union{Function,Number},yx::Union{Function,Number},zx::Union{Function,Number},xy::Union{Function,Number},yy::Union{Function,Number},zy::Union{Function,Number},xz::Union{Function,Number},yz::Union{Function,Number},zz::Union{Function,Number})
+    if (isa(xx,Number))
+        xx2=x->xx;
+    else
+        xx2=xx;
+    end
+    if (isa(yx,Number))
+        yx2=x->yx;
+    else
+        yx2=yx;
+    end
+    if (isa(zx,Number))
+        zx2=x->zx;
+    else
+        zx2=zx;
+    end
+    if (isa(xy,Number))
+        xy2=x->xy;
+    else
+        xy2=xy;
+    end
+    if (isa(yy,Number))
+        yy2=x->yy;
+    else
+        yy2=yy;
+    end
+    if (isa(zy,Number))
+        zy2=x->zy;
+    else
+        zy2=zy;
+    end
+    if (isa(xz,Number))
+        xz2=x->xz;
+    else
+        xz2=xz;
+    end
+    if (isa(yz,Number))
+        yz2=x->yz;
+    else
+        yz2=yz;
+    end
+    if (isa(zz,Number))
+        zz2=x->zz;
+    else
+        zz2=zz;
+    end
+    tensor3(xx2,yx2,zx2,xy2,yy2,zy2,xz2,yz2,zz2)
 end
 
-function tensor3(f::Function)
-    z=x->0;
-    return tensor3(f,z,z,z,f,z,z,z,f)
+"""
+    tensor3(fxx::Union{Function,Number},fyy::Union{Function,Number},fzz::Union{Function,Number})
+
+Function that returns a diagonal tensor3
+"""
+function tensor3(fxx::Union{Function,Number},fyy::Union{Function,Number},fzz::Union{Function,Number})
+    return tensor3(fxx,0,0,0,fyy,0,0,0,fzz)
 end
 
+"""
+    tensor3(f::Union{Function,Number})
+
+Function that returns a diagonal tensor3 with the same function in the three diagonal terms
+"""
+function tensor3(f::Union{Function,Number})
+    return tensor3(f,0,0,0,f,0,0,0,f)
+end
+
+"""
+    inverse(t::tensor3)
+
+Returns the inverse of the tensor t
+"""
 function inverse(t::tensor3)
     det(x)=(t.xx(x)*t.yy(x)*t.zz(x)+t.xy(x)*t.yz(x)*t.zx(x)+t.xz(x)*t.yx(x)*t.zy(x)-t.xx(x)*t.yz(x)*t.zy(x)-t.xy(x)*t.yx(x)*t.zz(x)-t.xz(x)*t.yy(x)*t.zx(x));
     xx(x)=(t.yy(x)*t.zz(x)-t.yz(x)*t.zy(x))/det(x)
