@@ -31,7 +31,8 @@ function FEM1(lambda::Real,mmax::Int64,epsi::Function,model::DiscreteModel,appro
     k2=(2*pi/lambda)^2;
     reffe = ReferenceFE(lagrangian,Float64,order);
     V = TestFESpace(model,reffe,conformity=:H1,vector_type=Vector{Float64});
-    U = V;
+    #U = V;
+    U=TrialFESpace(V,0);
     degree = 2*order;
     Ω = Triangulation(model);
     dΩ = Measure(Ω,degree);
@@ -110,7 +111,7 @@ end
 function FEM2(lambda::Real,mmax::Int64,epsi::Function,model::DiscreteModel,approx_neff::Real;order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
     k2=(2*pi/lambda)^2;
     reffe1 = ReferenceFE(nedelec,order)
-    reffe2 = ReferenceFE(lagrangian,Float64,2*order)
+    reffe2 = ReferenceFE(lagrangian,Float64,order+1)
     Ω = Triangulation(model);
     V1 = TestFESpace(Ω,reffe1,conformity=:Hcurl)
     V2 = TestFESpace(Ω,reffe2,conformity=:H1)
@@ -118,7 +119,7 @@ function FEM2(lambda::Real,mmax::Int64,epsi::Function,model::DiscreteModel,appro
     U2 = V2;
     V = MultiFieldFESpace([V1, V2])
     U = MultiFieldFESpace([U1, U2])
-    degree = 4*order;
+    degree = 2*order+2;
     dΩ = Measure(Ω,degree);
     a((Et1,Ez1),(Et2,Ez2))=∫( -curl(Et2)⋅curl(Et1) + ∇(Ez2)⋅(Et1) + k2*(Et2⋅(epsi*Et1)+Ez2*(epsi*Ez1)) -∇(Ez1)⋅∇(Ez2) )*dΩ
     b((Et1,Ez1),(Et2,Ez2)) = ∫( (Et2⋅Et1)-∇(Ez1)⋅(Et2) )*dΩ
@@ -179,7 +180,7 @@ The fiber is anisotropic and described with its relative permittivity tensor and
 function FEM(lambda::Real,mmax::Int64,eps::tensor3,mu::tensor3,model::DiscreteModel,approx_neff::Real;order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0)
     k=2*pi/lambda;
     reffe1 = ReferenceFE(nedelec,order)
-    reffe2 = ReferenceFE(lagrangian,Float64,2*order)
+    reffe2 = ReferenceFE(lagrangian,Float64,order+1)
     Ω = Triangulation(model);
     V1 = TestFESpace(Ω,reffe1,conformity=:Hcurl,vector_type=Vector{ComplexF64})
     V2 = TestFESpace(Ω,reffe2,conformity=:H1,vector_type=Vector{ComplexF64}) 
@@ -187,7 +188,7 @@ function FEM(lambda::Real,mmax::Int64,eps::tensor3,mu::tensor3,model::DiscreteMo
     U2 = V2;
     V = MultiFieldFESpace([V1, V2])
     U = MultiFieldFESpace([U1, U2])
-    degree = 4*order;
+    degree = 2*order+2;
     dΩ = Measure(Ω,degree);
     invmu=inverse(mu);
     tensor_C(x)=TensorValue(invmu.yy(x),-invmu.yx(x),-invmu.xy(x),invmu.xx(x))

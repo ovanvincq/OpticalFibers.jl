@@ -310,9 +310,9 @@ mutable struct ScalarModeFEM <: Mode
     Name::String
     neff::ComplexF64
     lambda::Float64
-    Ω::Gridap.Triangulation
-    dΩ::Gridap.CellData.Measure
-    E::Gridap.CellField
+    Ω#::Gridap.Triangulation
+    dΩ#::Gridap.CellData.Measure
+    E#::Gridap.CellField
     ScalarModeFEM(Name,neff,lambda,Ω,dΩ,E)=new(Name,neff,lambda,Ω,dΩ,E)
     ScalarModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[])
 end
@@ -354,14 +354,14 @@ mutable struct VectorModeFEM <: Mode
     Name::String
     neff::ComplexF64
     lambda::Float64
-    Ω::Gridap.Triangulation
-    dΩ::Gridap.CellData.Measure
-    Ex::Gridap.CellField
-    Ey::Gridap.CellField
-    Ez::Gridap.CellField
-    Hx::Gridap.CellField
-    Hy::Gridap.CellField
-    Hz::Gridap.CellField
+    Ω#::Gridap.Triangulation
+    dΩ#::Gridap.CellData.Measure
+    Ex#::Gridap.CellField
+    Ey#::Gridap.CellField
+    Ez#::Gridap.CellField
+    Hx#::Gridap.CellField
+    Hy#::Gridap.CellField
+    Hz#::Gridap.CellField
     VectorModeFEM(Name,neff,lambda,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz)=new(Name,neff,lambda,Ω,dΩ,Ex,Ey,Ez,Hx,Hy,Hz)
     VectorModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[],[],[],[],[],[])
 end
@@ -493,7 +493,7 @@ end
 """
     PoyntingVector(f::VectorField)
 
-Return a tuple of 3 matrix that describes the Poynting Vector (Px,Py,Pz)
+Return a tuple of 3 matrices.
 """
 function PoyntingVector(f::VectorField)
     0.5*real(f.Ey.*conj(f.Hz)-f.Ez.*conj(f.Hy)),0.5*real(f.Ez.*conj(f.Hx)-f.Ex.*conj(f.Hz)),0.5*real(f.Ex.*conj(f.Hy)-f.Ey.*conj(f.Hx))
@@ -502,7 +502,7 @@ end
 """
     PoyntingVector(m::VectorMode)
 
-Return a tuple of 3 matrix that describes the Poynting Vector (Px,Py,Pz)
+Return a tuple of 3 matrices.
 """
 function PoyntingVector(m::VectorMode)
     zeros(size(m.Ex)),zeros(size(m.Ex)),0.5*(m.Ex.*m.Hy-m.Ey.*m.Hx)
@@ -511,7 +511,7 @@ end
 """
     PoyntingVector(m::ScalarMode1D;sincos::Char='c')
 
-Return a tuple of 3 matrix that describes the Poynting Vector (Px,Py,Pz)
+Return a tuple of 3 matrices.
 
 - sincos must be 'c' for a field in cos(nu.θ) or 's' for a field in sin(nu.θ) if m.nu≠0
 """
@@ -522,7 +522,7 @@ end
 """
     PoyntingVector(m::ScalarMode2D)
 
-Return a tuple of 3 matrix that describes the Poynting Vector (Px,Py,Pz)
+Return a tuple of 3 matrices.
 """
 function PoyntingVector(m::ScalarMode2D)
     zeros(size(m.E)),zeros(size(m.E)),0.5*m.neff/c/mu0*abs2.(m.E)
@@ -531,7 +531,7 @@ end
 """
     PoyntingVector(f::VectorModeFEM)
 
-Return a tuple of 3 CellFields that describes the Poynting Vector (Px,Py,Pz)
+Return a tuple of 3 CellFields.
 """
 function PoyntingVector(m::VectorModeFEM)
     0.5*real(m.Ey.*conj(m.Hz)-m.Ez.*conj(m.Hy)),0.5*real(m.Ez.*conj(m.Hx)-m.Ex.*conj(m.Hz)),0.5*real(m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx))
@@ -540,7 +540,7 @@ end
 """
     PoyntingVector(f::ScalarModeFEM)
 
-Return a tuple of 3 CellFields that describes the Poynting Vector (Px,Py,Pz)
+Return a tuple of 3 CellFields.
 """
 function PoyntingVector(m::ScalarModeFEM)
     CellField(0,m.Ω),CellField(0,m.Ω),0.5*real(m.neff/c/mu0*abs2(m.E))
@@ -694,8 +694,6 @@ end
 ############################# Normalization #############################
 """
     normalize!(m::ScalarMode1D;unitIntegral::Bool=true)
-
-Normalize the mode m with the method given by the boolean parameter `unitIntegral`.
 """
 function normalize!(m::ScalarMode1D;unitIntegral::Bool=true)
     integral=trapz(m.r,2*pi*m.r.*((m.E).^2));
@@ -712,8 +710,6 @@ end
 
 """
     normalize!(m::ScalarMode2D;unitIntegral::Bool=true)
-
-Normalize the mode m with the method given by the boolean parameter `unitIntegral`.
 """
 function normalize!(m::ScalarMode2D;unitIntegral::Bool=true)
     integral=trapz((m.x,m.y),((m.E).^2));
@@ -727,8 +723,6 @@ end
 
 """
     normalize!(m::VectorMode)
-
-Normalize the mode m.
 """
 function normalize!(m::VectorMode)
     integral=abs(trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx)*0.5);
@@ -743,8 +737,6 @@ end
 
 """
     normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
-
-Normalize the mode m with the method given by the boolean parameter `unitIntegral`.
 """
 function normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
     if (m.E!=[])
@@ -760,8 +752,6 @@ end
 
 """
     normalize!(m::VectorModeFEM)
-
-Normalize the mode m.
 """
 function normalize!(m::VectorModeFEM)
     if (m.Ex!=[])
@@ -1099,8 +1089,9 @@ end
 """
     Aeff(m::VectorMode,n0::Union{Real,Function}=0)
 
-Compute the effective area of the mode m. n0 can be a constant or a function of x and y.
-If n0=0, this function assumes that n0≃neff (true in a weakly-guiding fiber).
+n0 must be a constant or a function of x and y.
+
+If n0=0, this function assumes that n0≃neff (correct for weakly-guiding fibers).
 """
 function Aeff(m::VectorMode,n0::Union{Real,Function}=0)
     #Approximation (neff=n0)
@@ -1126,7 +1117,6 @@ end
 """
     Aeff(m::ScalarModeFEM)
 
-Compute the effective area of the mode m. 
 """
 function Aeff(m::ScalarModeFEM)
     E2_task=Threads.@spawn sum(integrate(abs2(m.E),m.dΩ));
@@ -1139,8 +1129,9 @@ end
 """
     Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
 
-Compute the effective area of the mode m. n0 can be a constant or a function of x and y.
-If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guiding fiber).
+n0 must be a constant or a function of x and y.
+
+If n0=0, this function assumes that n0≃neff (correct for weakly-guiding fibers).
 """
 function Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
     #Approximation (real(neff)=n0)
@@ -1220,7 +1211,8 @@ end
     nonLinearCoefficient(m::VectorMode,n2::Union{Real,Function},n0::Union{Real,Function}=0)
 
 n2 and n0 must be a constant or a function of x and y.
-If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guiding fiber).
+
+If n0=0, this function assumes that n0≃neff (correct for weakly-guiding fibers).
 """
 function nonLinearCoefficient(m::VectorMode,n2::Union{Real,Function},n0::Union{Real,Function}=0)
     if (isa(n2,Real))
@@ -1276,8 +1268,9 @@ end
 """
     nonLinearCoefficient(m::VectorModeFEM,n2::Union{Real,Function},n0::Union{Real,Function}=0)
 
-    n2 and n0 must be a constant or a function of x and y.
-    If n0=0, this function assumes that n0≃neff (true in the case of a weakly-guiding fiber).
+n2 and n0 must be constants or functions of x and y.
+
+If n0=0, this function assumes that n0≃neff (correct for weakly-guiding fibers).
 """
 function nonLinearCoefficient(m::VectorModeFEM,n2::Union{Real,Function},n0::Union{Real,Function}=0)
     if (isa(n2,Real))
@@ -1330,8 +1323,6 @@ end
 
 """
     MFD(m::ScalarMode2D,theta::Real=0)
-
-Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
 """
 function MFD(m::ScalarMode2D,theta::Real=0)
     rmax=sqrt(maximum(m.x)^2+maximum(m.y)^2);
@@ -1349,8 +1340,6 @@ end
 
 """
     MFD(m::VectorMode,theta::Real=0)
-
-Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
 """
 function MFD(m::VectorMode,theta::Real=0)
     rmax=sqrt(maximum(m.x)^2+maximum(m.y)^2);
@@ -1369,8 +1358,6 @@ end
 
 """
     MFD(m::ScalarModeFEM,theta::Real=0)
-
-Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
 """
 function MFD(m::ScalarModeFEM,theta::Real=0)
     x=getindex.(m.Ω.grid.node_coordinates,1)
@@ -1393,8 +1380,6 @@ end
 
 """
     MFD(m::VectorModeFEM,theta::Real=0)
-
-Compute the MFD in the direction given by the angle theta (angle with the x-axis in degrees)
 """
 function MFD(m::VectorModeFEM,theta::Real=0)
     x=getindex.(m.Ω.grid.node_coordinates,1)
