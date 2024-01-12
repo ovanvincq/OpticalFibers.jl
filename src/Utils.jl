@@ -12,6 +12,7 @@ export derivative
 export ring
 export tensor3
 export inverse
+export add_cylindrical_PML
 
 """
     piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
@@ -340,5 +341,65 @@ function get_companion(A0,A1,A2)
     F[1:n,n+1:2*n]=-A0;
     F[n+1:2*n,1:n]=ones(T).*sparse(I,n,n);
     return E,F;
+end
+
+"""
+    add_cylindrical_PML(epsmu::Function,r_pml::Real,d_pml::Real,alpha::Real)
+
+Function that returns a tensor of permittivity/permeability with a cylindrical PML
+
+- epsmu: Function of the tuple (x,y) that describes the permittivity/permeability profile of the fiber
+- r_pml: distance between the fiber center and the PML beginning
+- d_pml: PML thickness
+- alpha: attenuation factor of the PML
+"""
+function add_cylindrical_PML(epsmu::Function,r_pml::Real,d_pml::Real,alpha::Real)
+    function pml_xx(x)
+        r=hypot(x[1],x[2]);
+        if r<=r_pml
+            return ComplexF64(epsmu(x));
+        else
+            phi=atan(x[2],x[1]);
+            rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+            sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+            return epsmu(x)*(rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
+        end
+    end
+    function pml_yy(x)
+        r=hypot(x[1],x[2]);
+        if r<=r_pml
+            return ComplexF64(epsmu(x));
+        else
+            phi=atan(x[2],x[1]);
+            rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+            sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+            return epsmu(x)*(rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
+        end
+    end
+    function pml_zz(x)
+        r=hypot(x[1],x[2]);
+        if r<=r_pml
+            return ComplexF64(epsmu(x));
+        else
+            rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+            sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+            return epsmu(x)*(rt/r)*sr;
+        end
+    end
+    function pml_xy(x)
+        r=hypot(x[1],x[2]);
+        if r<=r_pml
+            return ComplexF64(0.0);
+        else
+            phi=atan(x[2],x[1]);
+            rt=r-im*alpha/3.0*(r-r_pml)^3/(d_pml)^2;
+            sr=1.0-im*alpha*(r-r_pml)^2/(d_pml)^2;
+            return epsmu(x)*sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
+        end
+    end
+    function zf(x)
+        return ComplexF64(0.0)
+    end
+    return tensor3(pml_xx,pml_xy,zf,pml_xy,pml_yy,zf,zf,zf,pml_zz);
 end
 
