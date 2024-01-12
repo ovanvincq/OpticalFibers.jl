@@ -10,6 +10,9 @@ CurrentModule = OpticalFibers
     meshgrid
     derivative
     ring
+    approx_nFSM_PCF
+    approx_neff_PCF
+    add_cylindrical_PML
 ```
 
 ## Tensor
