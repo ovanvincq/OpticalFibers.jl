@@ -14,6 +14,7 @@ export tensor3
 export inverse
 export add_cylindrical_PML
 export approx_nFSM_PCF
+export approx_neff_PCF
 
 """
     piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
@@ -425,3 +426,24 @@ function approx_nFSM_PCF(lambda::Real,D::Real,pitch::Real)
     return sqrt(1.45^2-(V*lambda/(2*pi*aeff))^2);
 end
 
+"""
+    approx_neff_PCF(lambda::Real,D::Real,pitch::Real)
+
+Returns an approximate value of the effective index of the fundamental mode of a photonic crystal fiber [Saitoh2005](@cite)  
+- lambda: Wavelength
+- D: Hole diameter
+- pitch: Pitch 
+
+"""
+function approx_neff_PCF(lambda::Real,D::Real,pitch::Real)
+    nFSM=approx_nFSM_PCF(lambda,D,pitch);
+    c=[-0.0973 0.53193 0.24876 5.29801 ; -16.70566 6.70858 2.72423 0.05142 ; 67.13845 52.04855 13.28649 -5.18302 ; -50.25518 -540.66947 -36.80372 2.7641]';
+    d=[7 1.49 3.85 -2 ; 9 6.58 10 0.41 ; 10 24.8 15 6]'
+    B=zeros(4);
+    for i=1:4
+        B[i]=c[i,1]+c[i,2]*(D/pitch)^d[i,1]+c[i,3]*(D/pitch)^d[i,2]+c[i,4]*(D/pitch)^d[i,3];
+    end
+    W=B[1]+B[2]/(1+B[3]*exp(B[4]*lambda/pitch));
+    aeff=pitch/sqrt(3)
+    return sqrt(nFSM^2+(W*lambda/(2*pi*aeff))^2);
+end
