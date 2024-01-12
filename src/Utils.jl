@@ -13,6 +13,7 @@ export ring
 export tensor3
 export inverse
 export add_cylindrical_PML
+export approx_nFSM_PCF
 
 """
     piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
@@ -401,5 +402,26 @@ function add_cylindrical_PML(epsmu::Function,r_pml::Real,d_pml::Real,alpha::Real
         return ComplexF64(0.0)
     end
     return tensor3(pml_xx,pml_xy,zf,pml_xy,pml_yy,zf,zf,zf,pml_zz);
+end
+
+"""
+    approx_nFSM_PCF(lambda::Real,D::Real,pitch::Real)
+
+Returns an approximate value of nFSM for photonic crystal fiber [Saitoh2005](@cite)  
+- lambda: Wavelength
+- D: Hole diameter
+- pitch: Pitch 
+
+"""
+function approx_nFSM_PCF(lambda::Real,D::Real,pitch::Real)
+    a=[0.54808 0.71041 0.16904 -1.52736 ; 5.00401 9.73491 1.85765 1.06745 ; -10.43248 47.41496 18.96849 1.93229; 8.22992 -437.50962 -42.4318 3.89]';
+    b=[5 1.8 1.7 -0.84 ; 7 7.32 10 1.02 ; 9 22.8 14 13.4]';
+    A=zeros(4);
+    for i=1:4
+        A[i]=a[i,1]+a[i,2]*(D/pitch)^b[i,1]+a[i,3]*(D/pitch)^b[i,2]+a[i,4]*(D/pitch)^b[i,3];
+    end
+    V=A[1]+A[2]/(1+A[3]*exp(A[4]*lambda/pitch));
+    aeff=pitch/sqrt(3)
+    return sqrt(1.45^2-(V*lambda/(2*pi*aeff))^2);
 end
 
