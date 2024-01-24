@@ -199,7 +199,7 @@ abstract type Mode end
 Broadcast.:broadcastable(f::Mode)=Ref(f)
 
 """
-    ScalarMode1D{T<:Number} <: Mode
+    ScalarMode1D{T<:Union{Float64,ComplexF64}} <: Mode
 Structure describing a scalar mode of an optical fiber with a revolution symmetry
 
 - Name :: `String` - Name of the mode
