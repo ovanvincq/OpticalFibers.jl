@@ -1,13 +1,11 @@
-# OpticalFibers.ModeSolvers
+# OpticalFibers.ModeSolvers - Modes and Fields
 
 ```@meta
 CurrentModule = OpticalFibers.ModeSolvers
 ```
 
-This module contains different mode solvers for optical fibers. They are based on the interface conditions of analytical solutions between the layers of the fiber, finite difference method or finite element method.
-
 ## Fields
-This module defines two types of field: the scalar field (valid in the case of weakly guiding fibers) and the vector field.
+This module defines two types of fields: the scalar field (valid in the case of weakly guiding fibers) and the vector field.
 ```@docs
 Field
 ScalarField
@@ -31,17 +29,17 @@ VectorMode
 ScalarModeFEM
 VectorModeFEM
 ```
-A ScalarMode1D can be convert into a ScalarMode2D or a VectorMode:
+A ScalarMode1D can be converted into a ScalarMode2D or a VectorMode:
 ```@docs
 ScalarMode2D(::ScalarMode1D;::char)
 VectorMode(::ScalarMode1D;::Char,::Char)
 ```
-A ScalarMode2D can be convert into a VectorMode:
+A ScalarMode2D can be converted into a VectorMode:
 ```@docs
 VectorMode(::ScalarMode2D;::Char)
 ```
 
-A ScalarModeFEM can be convert into a VectorModeFEM:
+A ScalarModeFEM can be converted into a VectorModeFEM:
 ```@docs
 VectorModeFEM(::ScalarModeFEM;::Char)
 ```
@@ -78,11 +76,7 @@ normalize!
 ```
 
 ## Overlap integral
-The overlap integral between two fields f$_1$ and f$_2$ is $\langle f_1 \vert f_2 \rangle = \iint E_1 E_2^* dS$ for scalar fields and $\langle f_1 \vert f_2 \rangle = \iint \frac{1}{2}\left(\vec{E}_1 \wedge \vec{H}_2^*\right)_z dS$ for vector fields.  
-
-It is also possible to compute overlap integrals between two modes or between a mode and a field. 
-
-When modes are involved, they are normalized before the calculation.
+The overlap integral between two fields or modes f$_1$ and f$_2$ is $\langle f_1 \vert f_2 \rangle = \iint E_1 E_2^* dS$ for scalar fields/modes and $\langle f_1 \vert f_2 \rangle = \iint \frac{1}{2}\left(\vec{E}_1 \wedge \vec{H}_2^*\right)_z dS$ for vector fields/modes.  
 
 ```@docs
 overlap
@@ -104,7 +98,13 @@ If all the lengths are in microns and $n_2$ is in SI (m²/W), you have to multip
 ```
 
 ## Mode Field Diameter (MFD)
-The computation MFD is only valid for Gaussian-like beam (maximum at the center of the fiber and electric field with a constant sign). The MFD is calculated by finding the positions where $E=\frac{\max{\left(E\right)}}{\exp(1)}$ for scalar modes and $P_z=\frac{\max{\left(P_z\right)}}{\exp(2)}$ for vector modes. The optional parameters `theta` is the angle (in degrees) between the direction along which the MFD is computed and the x-axis.
+The computation MFD is only valid for Gaussian-like beam (maximum at the center of the fiber and electric field with a constant sign). The MFD is calculated by finding the positions where $\vert E \vert=\frac{\max{\left(\vert E\vert \right)}}{\exp(1)}$ for scalar modes and $P_z=\frac{\max{\left(P_z\right)}}{\exp(2)}$ for vector modes. The optional parameters `theta` is the angle (in degrees) between the direction along which the MFD is computed and the x-axis.
 ```@docs
     MFD
+```
+
+## Save in a vtk file
+The function writevtk of the package Gridap is overloaded to save a FEM field or mode to a file that can be opened with ParaView.
+```@docs
+    writevtk
 ```
