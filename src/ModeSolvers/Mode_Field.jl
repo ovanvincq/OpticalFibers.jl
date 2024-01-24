@@ -46,6 +46,7 @@ Base.:-(f::ScalarField) = ScalarField(f.x,f.y,-f.E);
 Base.:real(f::ScalarField) = ScalarField(f.x,f.y,real(f.E));
 Base.:imag(f::ScalarField) = ScalarField(f.x,f.y,imag(f.E));
 Base.:conj(f::ScalarField) = ScalarField(f.x,f.y,conj(f.E));
+Base.:transpose(f::ScalarField) = ScalarField(f.x,f.y,f.E);
 
 Base.show(io::IO, f::ScalarField) = print(io,"x = ",f.x[1]," : ",f.x[end],"\ny = ",f.y[1]," : ",f.y[end],"\n|E| ∈ [",minimum(abs.(f.E)),",",maximum(abs.(f.E)),"]");
 
@@ -97,6 +98,7 @@ Base.:-(f::VectorField) = VectorField(f.x,f.y,-(f.Ex),-(f.Ey),-(f.Ez),-(f.Hx),-(
 Base.:real(f::VectorField) = VectorField(f.x,f.y,real(f.Ex),real(f.Ey),real(f.Ez),real(f.Hx),real(f.Hy),real(f.Hz));
 Base.:imag(f::VectorField) = VectorField(f.x,f.y,imag(f.Ex),imag(f.Ey),imag(f.Ez),imag(f.Hx),imag(f.Hy),imag(f.Hz));
 Base.:conj(f::VectorField) = VectorField(f.x,f.y,conj(f.Ex),conj(f.Ey),conj(f.Ez),conj(f.Hx),conj(f.Hy),conj(f.Hz));
+Base.:transpose(f::VectorField) = VectorField(f.x,f.y,f.Ex,f.Ey,f.Ez,f.Hx,f.Hy,f.Hz);
 
 """
 Structure describing a scalar field defined with a Triangulation  
@@ -135,6 +137,7 @@ Base.:-(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,-f.E);
 Base.:real(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,real(f.E));
 Base.:imag(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,imag(f.E));
 Base.:conj(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,conj(f.E));
+Base.:transpose(f::ScalarFieldFEM) = ScalarFieldFEM(f.Ω,f.dΩ,f.E);
 
 """
 Structure describing a vector field defined with a Triangulation   
@@ -183,11 +186,12 @@ Base.:-(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,-f.Ex,-f.Ey,-f.Ez,-f.Hx,-
 Base.:real(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,real(f.Ex),real(f.Ey),real(f.Ez),real(f.Hx),real(f.Hy),real(f.Hz));
 Base.:imag(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,imag(f.Ex),imag(f.Ey),imag(f.Ez),imag(f.Hx),imag(f.Hy),imag(f.Hz));
 Base.:conj(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,conj(f.Ex),conj(f.Ey),conj(f.Ez),conj(f.Hx),conj(f.Hy),conj(f.Hz));
+Base.:transpose(f::VectorFieldFEM) = VectorFieldFEM(f.Ω,f.dΩ,f.Ex,f.Ey,f.Ez,f.Hx,f.Hy,f.Hz);
 
 ############################# Modes #############################
 
 """
-Abstract structure to describe an optical fiber mode
+Abstract structure that describes an optical fiber mode
 
 `abstract type Mode end`
 """
@@ -195,106 +199,117 @@ abstract type Mode end
 Broadcast.:broadcastable(f::Mode)=Ref(f)
 
 """
+    ScalarMode1D{T<:Number} <: Mode
 Structure describing a scalar mode of an optical fiber with a revolution symmetry
 
 - Name :: `String` - Name of the mode
-- neff :: `Float64` - Effective index
+- neff :: `T` - Effective index
 - lambda :: `Float64` - the wavelength at which the mode was calculated
 - nu :: `Int64` - Azimuthal number
 - r :: `Vector{Float64}` - Radial coordinate
-- E :: `Vector{Float64}` - Electric field
+- E :: `Vector{T}` - Electric field
 """
-struct ScalarMode1D <: Mode
+struct ScalarMode1D{T<:Union{Float64,ComplexF64}} <: Mode
     Name::String
-    neff::Float64
+    neff::T
     lambda::Float64
     nu::Int64
     r::Vector{Float64}
-    E::Vector{Float64}
-    ScalarMode1D(Name,neff,lambda,nu,r,E) = new(Name,neff,lambda,nu,Float64.(r),Float64.(E))
-    ScalarMode1D(Name,neff,lambda,nu)= new(Name,neff,lambda,nu,[],[])
+    E::Vector{T};
+    ScalarMode1D(Name,neff,lambda,nu,r,E) = (isreal(neff) && isreal(E)) ? new{Float64}(Name,Float64(neff),lambda,nu,Float64.(r),Float64.(E)) : new{ComplexF64}(Name,ComplexF64(neff),lambda,nu,Float64.(r),ComplexF64.(E))
+    ScalarMode1D(Name,neff,lambda,nu)= new{eltype(neff)}(Name,neff,lambda,nu,[],Vector{eltype(neff)}(undef,0))
 end
+
+Base.:transpose(m::ScalarMode1D) = ScalarMode1D(m.Name,m.neff,m.lambda,m.nu,m.r,m.E);
 
 function Base.show(io::IO, ::MIME"text/plain",f::ScalarMode1D) 
     if isempty(f.r) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nnu = ",f.nu);
     else
-        print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nnu = ",f.nu,"\nr ∈ [",f.r[1],",",f.r[end],"]\nE ∈ [",minimum(f.E),",",maximum(f.E),"]");
+        print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nnu = ",f.nu,"\nr ∈ [",f.r[1],",",f.r[end],"]\n|E| ∈ [",minimum(abs.(f.E)),",",maximum(abs.(f.E)),"]");
     end
 end
-Base.show(io::IO, f::ScalarMode1D) = isempty(f.r) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",",f.nu,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",",f.nu,",[",minimum(f.r),",",maximum(f.r),"],[",minimum(f.E),",",maximum(f.E),"]]");
+Base.show(io::IO, f::ScalarMode1D) = isempty(f.r) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",",f.nu,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",",f.nu,",[",minimum(f.r),",",maximum(f.r),"],[",minimum(abs.(f.E)),",",maximum(abs.(f.E)),"]]");
 
 """
-Structure describing a scalar mode of an optical fiber in cartesian coordinates
+    VectorMode{T<:Union{Float64,ComplexF64}} <: Mode
+
+Structure describing a scalar mode of an optical fiber in cartesian coordinates.
 
 - Name :: `String` - Name of the mode
-- neff :: `Float64` - Effective index
+- neff :: `T` - Effective index
 - lambda :: `Float64` - the wavelength at which the mode was calculated
 - x :: `Vector{Float64}` - Horizontal coordinate
 - y :: `Vector{Float64}` - Vertical coordinate
-- E :: `Matrix{Float64}` - Electric field
+- E :: `Matrix{T}` - Electric field
 """
-struct ScalarMode2D <: Mode
+struct ScalarMode2D{T<:Union{Float64,ComplexF64}}  <: Mode
     Name::String
-    neff::Float64
+    neff::T
     lambda::Float64
     x::Vector{Float64}
     y::Vector{Float64}
-    E::Matrix{Float64}
-    ScalarMode2D(Name,neff,lambda,x,y,E)=new(Name,neff,lambda,Float64.(x),Float64.(y),Float64.(E))
-    ScalarMode2D(Name,neff,lambda)=new(Name,neff,lambda,[],[],Matrix{Float64}(undef,0,0))
+    E::Matrix{T}
+    ScalarMode2D(Name,neff,lambda,x,y,E) = (isreal(neff) && isreal(E)) ? new{Float64}(Name,Float64(neff),lambda,Float64.(x),Float64.(y),Float64.(E)) : new{ComplexF64}(Name,ComplexF64(neff),lambda,Float64.(x),Float64.(y),ComplexF64.(E))
+    ScalarMode2D(Name,neff,lambda)= new{eltype(neff)}(Name,neff,lambda,[],[],Matrix{eltype(neff)}(undef,0,0))
 end
+
+Base.:transpose(m::ScalarMode2D) = ScalarMode2D(m.Name,m.neff,m.lambda,m.x,m.x,m.E);
 
 function Base.show(io::IO, ::MIME"text/plain",f::ScalarMode2D) 
     if isempty(f.x) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda);
     else
-        print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nx ∈ [",f.x[1],",",f.x[end],"]\ny ∈ [",f.y[1],",",f.y[end],"]\nE ∈ [",minimum(f.E),",",maximum(f.E),"]");
+        print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nx ∈ [",f.x[1],",",f.x[end],"]\ny ∈ [",f.y[1],",",f.y[end],"]\n|E| ∈ [",minimum(abs.(f.E)),",",maximum(abs.(f.E)),"]");
     end
 end
-Base.show(io::IO, f::ScalarMode2D) = isempty(f.x) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",[",minimum(f.x),",",maximum(f.x),"],[",minimum(f.y),",",maximum(f.y),"],[",minimum(f.E),",",maximum(f.E),"]]");
+Base.show(io::IO, f::ScalarMode2D) = isempty(f.x) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",[",minimum(f.x),",",maximum(f.x),"],[",minimum(f.y),",",maximum(f.y),"],[",minimum(abs.(f.E)),",",maximum(abs.(f.E)),"]]");
 
 """
+    VectorMode{T<:Union{Float64,ComplexF64}} <: Mode
 Structure describing a vector mode of an optical fiber in cartesian coordinates.  
 
-This structure assumes that the fiber is made of a non-lossy materials. In this case, the x- and y-components of the electric/magnetic fields can be chosen real and their z-components are then pure imaginary numbers.
+If the effective index is real, the x- and y-components of the electric/magnetic fields are chosen real while the z-component is purely imaginary. Then vectors Ez and Hz are the imaginary part of the z component of the fields.
 
 - Name :: `String` - Name of the mode
-- neff :: `Float64` - Effective index
+- neff :: `T` - Effective index
 - lambda :: `Float64` - the wavelength at which the mode was calculated
 - x :: `Vector{Float64}` - Horizontal coordinate
 - y :: `Vector{Float64}` - Vertical coordinate
-- Ex :: `Matrix{Float64}` - Real part of the x-component of the electric field
-- Ey :: `Matrix{Float64}` - Real part of the y-component of the electric field
-- Ez :: `Matrix{Float64}` - Imaginary part of the z-component of the electric field
-- Hx :: `Matrix{Float64}` - Real part of the x-component of the magnetic field
-- Hy :: `Matrix{Float64}` - Real part of the y-component of the magnetic field
-- Hz :: `Matrix{Float64}` - Imaginary part of the z-component of the magnetic field
+- Ex :: `Matrix{T}` - Real part of the x-component of the electric field
+- Ey :: `Matrix{T}` - Real part of the y-component of the electric field
+- Ez :: `Matrix{T}` - Imaginary part of the z-component of the electric field
+- Hx :: `Matrix{T}` - Real part of the x-component of the magnetic field
+- Hy :: `Matrix{T}` - Real part of the y-component of the magnetic field
+- Hz :: `Matrix{T}` - Imaginary part of the z-component of the magnetic field
 """
-struct VectorMode <: Mode
+struct VectorMode{T<:Union{Float64,ComplexF64}} <: Mode
     Name::String
-    neff::Float64
+    neff::T
     lambda::Float64
     x::Vector{Float64}
     y::Vector{Float64}
-    Ex::Matrix{Float64}
-    Ey::Matrix{Float64}
-    Ez::Matrix{Float64}
-    Hx::Matrix{Float64}
-    Hy::Matrix{Float64}
-    Hz::Matrix{Float64}
-    VectorMode(Name,neff,lambda,x,y,Ex,Ey,Ez,Hx,Hy,Hz)=new(Name,neff,lambda,Float64.(x),Float64.(y),Float64.(Ex),Float64.(Ey),Float64.(Ez),Float64.(Hx),Float64.(Hy),Float64.(Hz))
-    VectorMode(Name,neff,lambda)=new(Name,neff,lambda,[],[],Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0))
+    Ex::Matrix{T}
+    Ey::Matrix{T}
+    Ez::Matrix{T}
+    Hx::Matrix{T}
+    Hy::Matrix{T}
+    Hz::Matrix{T}
+    VectorMode(Name,neff,lambda,x,y,Ex,Ey,Ez,Hx,Hy,Hz) = (isreal(neff) && isreal(Ex) && isreal(Ey) && isreal(Ez) && isreal(Hx) && isreal(Hy) && isreal(Hz)) ? new{Float64}(Name,Float64(neff),lambda,Float64.(x),Float64.(y),Float64.(Ex),Float64.(Ey),Float64.(Ez),Float64.(Hx),Float64.(Hy),Float64.(Hz)) : new{ComplexF64}(Name,ComplexF64(neff),lambda,Float64.(x),Float64.(y),ComplexF64.(Ex),ComplexF64.(Ey),ComplexF64.(Ez),ComplexF64.(Hx),ComplexF64.(Hy),ComplexF64.(Hz))
+    VectorMode(Name,neff,lambda)= new{eltype(neff)}(Name,neff,lambda,[],[],Matrix{eltype(neff)}(undef,0,0),Matrix{eltype(neff)}(undef,0,0),Matrix{eltype(neff)}(undef,0,0),Matrix{eltype(neff)}(undef,0,0),Matrix{eltype(neff)}(undef,0,0),Matrix{eltype(neff)}(undef,0,0))
+
 end
+
+Base.:transpose(m::VectorMode) = VectorMode(m.Name,m.neff,m.lambda,m.x,m.x,m.Ex,m.Ey,m.Ez,m.Hx,m.Hy,m.Hz);
 
 function Base.show(io::IO, ::MIME"text/plain",f::VectorMode) 
     if isempty(f.x) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda);
     else
-        print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nx ∈ [",f.x[1],",",f.x[end],"]\ny ∈ [",f.y[1],",",f.y[end],"]\nEx ∈ [",minimum(f.Ex),",",maximum(f.Ex),"]\nEy ∈ [",minimum(f.Ey),",",maximum(f.Ey),"]","]\nEz ∈ [",minimum(f.Ez),",",maximum(f.Ez),"]","]\nHx ∈ [",minimum(f.Hx),",",maximum(f.Hx),"]","]\nHy ∈ [",minimum(f.Hy),",",maximum(f.Hy),"]","]\nHz ∈ [",minimum(f.Hz),",",maximum(f.Hz),"]","]");
+        print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nx ∈ [",f.x[1],",",f.x[end],"]\ny ∈ [",f.y[1],",",f.y[end],"]\n|Ex| ∈ [",minimum(abs.(f.Ex)),",",maximum(abs.(f.Ex)),"]\n|Ey| ∈ [",minimum(abs.(f.Ey)),",",maximum(abs.(f.Ey)),"]","]\n|Ez| ∈ [",minimum(abs.(f.Ez)),",",maximum(abs.(f.Ez)),"]","]\n|Hx| ∈ [",minimum(abs.(f.Hx)),",",maximum(abs.(f.Hx)),"]","]\n|Hy| ∈ [",minimum(abs.(f.Hy)),",",maximum(abs.(f.Hy)),"]","]\n|Hz| ∈ [",minimum(abs.(f.Hz)),",",maximum(abs.(f.Hz)),"]","]");
     end
 end
-Base.show(io::IO, f::VectorMode) = isempty(f.x) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",[",minimum(f.x),",",maximum(f.x),"],[",minimum(f.y),",",maximum(f.y),"],[",minimum(f.Ex),",",maximum(f.Ex),"],[",minimum(f.Ey),",",maximum(f.Ey),"],[",minimum(f.Ez),",",maximum(f.Ez),"],[",minimum(f.Hx),",",maximum(f.Hx),"],[",minimum(f.Hy),",",maximum(f.Hy),"],[",minimum(f.Hz),",",maximum(f.Hz),"]]");
+Base.show(io::IO, f::VectorMode) = isempty(f.x) ? print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,"]") : print(io,"[\"",f.Name,"\",",f.neff,",",f.lambda,",[",minimum(f.x),",",maximum(f.x),"],[",minimum(f.y),",",maximum(f.y),"],[",minimum(abs.(f.Ex)),",",maximum(abs.(f.Ex)),"],[",minimum(abs.(f.Ey)),",",maximum(abs.(f.Ey)),"],[",minimum(abs.(f.Ez)),",",maximum(abs.(f.Ez)),"],[",minimum(abs.(f.Hx)),",",maximum(abs.(f.Hx)),"],[",minimum(abs.(f.Hy)),",",maximum(abs.(f.Hy)),"],[",minimum(abs.(f.Hz)),",",maximum(abs.(f.Hz)),"]]");
 
 """
 Structure describing a scalar mode of an optical fiber computed with FEM.  
@@ -317,6 +332,8 @@ mutable struct ScalarModeFEM <: Mode
     ScalarModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[])
 end
 
+Base.:transpose(m::ScalarModeFEM) = ScalarModeFEM(m.Name,m.neff,m.lambda,m.Ω,m.dΩ,m.E);
+
 function Base.show(io::IO, ::MIME"text/plain",f::ScalarModeFEM) 
     if (f.E==[]) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nfield: no");
@@ -326,9 +343,12 @@ function Base.show(io::IO, ::MIME"text/plain",f::ScalarModeFEM)
 end
 Base.show(io::IO, f::ScalarModeFEM) = (f.E==[]) ? print(io,"[",f.Name,",",f.neff,",",f.lambda,",no]") : print(io,"[",f.Name,",",f.neff,",",f.lambda,",yes]");
 
-function writevtk(name::String,m::ScalarModeFEM)
+"""
+    writevtk(name::String,m::Union{ScalarModeFEM,ScalarFieldFEM})
+"""
+function Gridap.:writevtk(name::String,m::Union{ScalarModeFEM,ScalarFieldFEM})
     if (m.E==[])
-        throw(DomainError(m, "The mode does not contain any field"));
+        throw(DomainError(m, "The mode/field does not contain any field"));
     else
         Gridap.writevtk(m.Ω,name,cellfields=["real(E)"=>real(m.E),"imag(E)"=>imag(m.E)]);
     end
@@ -366,6 +386,8 @@ mutable struct VectorModeFEM <: Mode
     VectorModeFEM(Name,neff,lambda)=new(Name,neff,lambda,[],[],[],[],[],[],[],[])
 end
 
+Base.:transpose(m::VectorModeFEM) = VectorModeFEM(m.Name,m.neff,m.lambda,m.Ω,m.dΩ,m.Ex,m.Ey,m.Ez,m.Hx,m.Hy,m.Hz);
+
 function Base.show(io::IO, ::MIME"text/plain",f::VectorModeFEM) 
     if (f.Ex==[]) 
         print(io,"Name = ",f.Name,"\nneff = ",f.neff,"\nlambda = ",f.lambda,"\nfield: no");
@@ -375,16 +397,19 @@ function Base.show(io::IO, ::MIME"text/plain",f::VectorModeFEM)
 end
 Base.show(io::IO, f::VectorModeFEM) = (f.Ex==[]) ? print(io,"[",f.Name,",",f.neff,",",f.lambda,",no]") : print(io,"[",f.Name,",",f.neff,",",f.lambda,",yes]");
 
-function writevtk(name::String,m::VectorModeFEM)
+"""
+    writevtk(name::String,m::Union{VectorModeFEM,VectorFieldFEM})
+"""
+function Gridap.:writevtk(name::String,m::Union{VectorModeFEM,VectorFieldFEM})
     if (m.Ex==[])
-        throw(DomainError(m, "The mode does not contain any field"));
+        throw(DomainError(m, "The mode/field does not contain any field"));
     else
         Gridap.writevtk(m.Ω,name,cellfields=["real(Ex)"=>real(m.Ex),"imag(Ex)"=>imag(m.Ex),"real(Ey)"=>real(m.Ey),"imag(Ey)"=>imag(m.Ey),"real(Ez)"=>real(m.Ez),"imag(Ez)"=>imag(m.Ez),"real(Hx)"=>real(m.Hx),"imag(Hx)"=>imag(m.Hx),"real(Hy)"=>real(m.Hy),"imag(Hy)"=>imag(m.Hy),"real(Hz)"=>real(m.Hz),"imag(Hz)"=>imag(m.Hz)]);
     end
     return nothing;
 end
 
-############################# Mode conversion #############################
+############################# Losses #############################
 """
     losses(m::Mode)
 
@@ -505,7 +530,7 @@ end
 Return a tuple of 3 matrices.
 """
 function PoyntingVector(m::VectorMode)
-    zeros(size(m.Ex)),zeros(size(m.Ex)),0.5*(m.Ex.*m.Hy-m.Ey.*m.Hx)
+    0.5*real(m.Ey.*conj(m.Hz)-m.Ez.*conj(m.Hy)),0.5*real(m.Ez.*conj(m.Hx)-m.Ex.*conj(m.Hz)),0.5*real(m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx))
 end
 
 """
@@ -525,7 +550,7 @@ end
 Return a tuple of 3 matrices.
 """
 function PoyntingVector(m::ScalarMode2D)
-    zeros(size(m.E)),zeros(size(m.E)),0.5*m.neff/c/mu0*abs2.(m.E)
+    zeros(size(m.E)),zeros(size(m.E)),0.5*real(m.neff)/c/mu0*abs2.(m.E)
 end
 
 """
@@ -580,7 +605,11 @@ Returns the vector field due to the mode m after a propagation distance z
 """
 function VectorField(m::VectorMode,z::Real=0)
     p=exp(im*z*2*pi/m.lambda*m.neff);
-    VectorField(m.x,m.y,m.Ex*p,m.Ey*p,m.Ez*im*p,m.Hx*p,m.Hy*p,m.Hz*im*p);
+    if (typeof(m.neff)==Float64)
+        VectorField(m.x,m.y,m.Ex*p,m.Ey*p,m.Ez*im*p,m.Hx*p,m.Hy*p,m.Hz*im*p);
+    else
+        VectorField(m.x,m.y,m.Ex*p,m.Ey*p,m.Ez*p,m.Hx*p,m.Hy*p,m.Hz*p);
+    end
 end
 
 """
@@ -642,9 +671,9 @@ Returns a scalar field obtained by the linear interpolation of the field f.
 
 This function assumes that the electric field is null outside the box defined by f.x and f.y
 """
-function Interpolation(f::ScalarField,x::Vector{<:Real},y::Vector{<:Real})
+function Interpolation(f::ScalarField,x::AbstractVector{<:Real},y::AbstractVector{<:Real})
     if isempty(f.x)
-        return ScalarField([],[],Matrix{Float64}(undef,0,0));
+        return ScalarField([],[],Matrix{ComplexF64}(undef,0,0));
     else
         interp=LinearInterpolation((f.y,f.x),f.E,extrapolation_bc=0);
         E=interp.(x,y');
@@ -661,7 +690,7 @@ This function assumes that the electric/magnetic field is null outside the box d
 """
 function Interpolation(f::VectorField,x::Vector{<:Real},y::Vector{<:Real})
     if isempty(f.x)
-        return VectorField([],[],Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0),Matrix{Float64}(undef,0,0));
+        return VectorField([],[],Matrix{ComplexF64}(undef,0,0),Matrix{ComplexF64}(undef,0,0),Matrix{ComplexF64}(undef,0,0),Matrix{ComplexF64}(undef,0,0),Matrix{ComplexF64}(undef,0,0),Matrix{ComplexF64}(undef,0,0));
     else
         interp=LinearInterpolation((f.x,f.y),f.Ex,extrapolation_bc=0);
         Ex=interp.(x,y');
@@ -679,7 +708,7 @@ function Interpolation(f::VectorField,x::Vector{<:Real},y::Vector{<:Real})
     end
 end
 
-function Interpolation(f::Field,x::AbstractRange,y::Vector{<:Real})
+#=function Interpolation(f::Field,x::AbstractRange,y::Vector{<:Real})
     Interpolation(f,collect(x),y)
 end
 
@@ -689,50 +718,50 @@ end
 
 function Interpolation(f::Field,x::AbstractRange,y::AbstractRange)
     Interpolation(f,collect(x),collect(y))
-end
+end=#
 
 ############################# Normalization #############################
 """
     normalize!(m::ScalarMode1D;unitIntegral::Bool=true)
 """
 function normalize!(m::ScalarMode1D;unitIntegral::Bool=true)
-    integral=trapz(m.r,2*pi*m.r.*((m.E).^2));
+    integral=trapz(m.r,2*pi*m.r.*(abs2.(m.E)));
     if (m.nu!=0)
         integral=integral*0.5;
     end
     if unitIntegral
         (m.E).=(m.E)/sqrt(integral);
     else
-        (m.E).=(m.E)*sqrt(2*mu0*c/m.neff/integral);
+        (m.E).=(m.E)*sqrt(2*mu0*c/real(m.neff)/integral);
     end
-    return nothing
+    m
 end
 
 """
     normalize!(m::ScalarMode2D;unitIntegral::Bool=true)
 """
 function normalize!(m::ScalarMode2D;unitIntegral::Bool=true)
-    integral=trapz((m.x,m.y),((m.E).^2));
+    integral=trapz((m.x,m.y),(abs2.(m.E)));
     if unitIntegral
         (m.E).=(m.E)/sqrt(integral);
     else
-        (m.E).=(m.E)*sqrt(2*mu0*c/m.neff/integral);
+        (m.E).=(m.E)*sqrt(2*mu0*c/real(m.neff)/integral);
     end
-    return nothing
+    m
 end
 
 """
     normalize!(m::VectorMode)
 """
 function normalize!(m::VectorMode)
-    integral=abs(trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx)*0.5);
+    integral=abs(trapz((m.x,m.y),abs.(m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx)))*0.5);
     (m.Ex).=(m.Ex)/sqrt(integral);
     (m.Ey).=(m.Ey)/sqrt(integral);
     (m.Ez).=(m.Ez)/sqrt(integral);
     (m.Hx).=(m.Hx)/sqrt(integral);
     (m.Hy).=(m.Hy)/sqrt(integral);
     (m.Hz).=(m.Hz)/sqrt(integral);
-    return nothing
+    m
 end
 
 """
@@ -744,10 +773,10 @@ function normalize!(m::ScalarModeFEM;unitIntegral::Bool=true)
         if unitIntegral
             m.E=m.E/sqrt(integral);
         else
-            m.E=m.E*sqrt(2*mu0*c/m.neff/integral);
+            m.E=m.E*sqrt(2*mu0*c/real(m.neff)/integral);
         end
     end
-    return
+    m
 end
 
 """
@@ -763,14 +792,14 @@ function normalize!(m::VectorModeFEM)
         m.Hy=m.Hy/sqrt(integral);
         m.Hz=m.Hz/sqrt(integral);
     end
-    return
+    m
 end
 
 ############################# Overlap #############################
 """
-    overlap(f1::ScalarField,f2::ScalarField)
+    overlap(f1::Union{ScalarField,ScalarMode2D},f2::Union{ScalarField,ScalarMode2D})
 """
-function overlap(f1::ScalarField,f2::ScalarField)
+function overlap(f1::Union{ScalarField,ScalarMode2D},f2::Union{ScalarField,ScalarMode2D})
     if ((f1.x==f2.x) && (f1.y==f2.y))
         return trapz((f1.x,f1.y),f1.E.*(conj.(f2.E)));
     else
@@ -785,9 +814,9 @@ function overlap(f1::ScalarField,f2::ScalarField)
 end
 
 """
-    overlap(f1::VectorField,f2::VectorField)
+    overlap(f1::Union{VectorField,VectorMode},f2::Union{VectorField,VectorMode})
 """
-function overlap(f1::VectorField,f2::VectorField)
+function overlap(f1::Union{VectorField,VectorMode},f2::Union{VectorField,VectorMode})
     if ((f1.x==f2.x) && (f1.y==f2.y))
         return trapz((f2.x,f2.y),f1.Ex.*conj.(f2.Hy)-f1.Ey.*conj.(f2.Hx))*0.5;
     else
@@ -816,195 +845,21 @@ function overlap(m1::ScalarMode1D,m2::ScalarMode1D)
         return 0.0;
     end
     if (m1.r==m2.r)
-        integral1=trapz(m1.r,m1.r.*(m1.E.^2));
-        integral2=trapz(m2.r,m2.r.*(m2.E.^2));
-        integral=trapz(m1.r,m1.r.*m1.E.*m2.E);
-        return integral/sqrt(integral1*integral2);
+        return trapz(m1.r,m1.r.*m1.E.*conj(m2.E))*(1+(m1.nu==0))*pi;
     else
         r=unique(sort(vcat(m1.r,m2.r)));
         interp1=LinearInterpolation(m1.r,m1.E,extrapolation_bc=0);
         E1=interp1.(r);
         interp2=LinearInterpolation(m2.r,m2.E,extrapolation_bc=0);
         E2=interp2.(r);
-        integral1=trapz(r,r.*(E1.^2));
-        integral2=trapz(r,r.*(E2.^2));
-        integral=trapz(r,r.*E1.*E2);
-        return integral/sqrt(integral1*integral2);
+        return trapz(r,r.*E1.*conj(E2))*(1+(m1.nu==0))*pi;
     end
 end
 
 """
-    overlap(m1::ScalarMode2D,m2::ScalarMode2D)
+    overlap(m1::Union{ScalarFieldFEM,ScalarModeFEM},m2::Union{ScalarFieldFEM,ScalarModeFEM})
 """
-function overlap(m1::ScalarMode2D,m2::ScalarMode2D)
-    if ((isempty(m1.x)) || (isempty(m2.x)))
-        throw(ArgumentError("At least one of the two modes does not have a field"));
-    end
-    if ((m1.x==m2.x) && (m1.y==m2.y))
-        integral1=trapz((m1.x,m1.y),((m1.E).^2));
-        integral2=trapz((m2.x,m2.y),((m2.E).^2));
-        integral=trapz((m1.x,m1.y),(m2.E.*m1.E));
-        return integral/sqrt(integral1*integral2);
-    else
-        x=unique(sort(vcat(m1.x,m2.x)));
-        y=unique(sort(vcat(m1.y,m2.y)));
-        interp=LinearInterpolation((m1.x,m1.y),m1.E,extrapolation_bc=0);
-        E1=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.E,extrapolation_bc=0);
-        E2=interp.(x,y');
-        integral1=trapz((x,y),E1.^2);
-        integral2=trapz((x,y),E2.^2);
-        integral=trapz((x,y),E1.*E2);
-        return integral/sqrt(integral1*integral2);
-    end
-end
-
-"""
-    overlap(f1::ScalarField,m2::ScalarMode2D)
-"""
-function overlap(f1::ScalarField,m2::ScalarMode2D)
-    if ((isempty(f1.x)) || (isempty(m2.x)))
-        throw(ArgumentError("At least one of the two arguments does not have a field"));
-    end
-    if ((f1.x==m2.x) && (f1.y==m2.y))
-        integral2=trapz((m2.x,m2.y),((m2.E).^2));
-        integral=trapz((f1.x,f1.y),(m2.E.*f1.E));
-        return integral/sqrt(integral2);
-    else
-        x=unique(sort(vcat(f1.x,m2.x)));
-        y=unique(sort(vcat(f1.y,m2.y)));
-        interp=LinearInterpolation((f1.x,f1.y),f1.E,extrapolation_bc=0);
-        E1=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.E,extrapolation_bc=0);
-        E2=interp.(x,y');
-        integral2=trapz((x,y),E2.^2);
-        integral=trapz((x,y),E1.*E2);
-        return integral/sqrt(integral2);
-    end
-end
-
-"""
-    overlap(m1::ScalarMode2D,f2::ScalarField)
-"""
-function overlap(m1::ScalarMode2D,f2::ScalarField)
-    return conj(overlap(f2,m1));
-end
-
-"""
-    overlap(m1::VectorMode,m2::VectorMode)
-"""
-function overlap(m1::VectorMode,m2::VectorMode)
-    if ((isempty(m1.x)) || (isempty(m2.x)))
-        throw(ArgumentError("At least one of the two modes does not have a field"));
-    end
-    if ((m1.x==m2.x) && (m1.y==m2.y))
-        integral1=trapz((m1.x,m1.y),m1.Ex.*m1.Hy-m1.Ey.*m1.Hx)*0.5;
-        integral2=trapz((m2.x,m2.y),m2.Ex.*m2.Hy-m2.Ey.*m2.Hx)*0.5;
-        integral=trapz((m2.x,m2.y),m1.Ex.*m2.Hy-m1.Ey.*m2.Hx)*0.5;
-        return integral/sqrt(integral1*integral2);
-    else
-        x=unique(sort(vcat(m1.x,m2.x)));
-        y=unique(sort(vcat(m1.y,m2.y)));
-        interp=LinearInterpolation((m1.x,m1.y),m1.Ex,extrapolation_bc=0);
-        Ex1=interp.(x,y');
-        interp=LinearInterpolation((m1.x,m1.y),m1.Ey,extrapolation_bc=0);
-        Ey1=interp.(x,y');
-        interp=LinearInterpolation((m1.x,m1.y),m1.Hx,extrapolation_bc=0);
-        Hx1=interp.(x,y');
-        interp=LinearInterpolation((m1.x,m1.y),m1.Hy,extrapolation_bc=0);
-        Hy1=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Ex,extrapolation_bc=0);
-        Ex2=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Ey,extrapolation_bc=0);
-        Ey2=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Hx,extrapolation_bc=0);
-        Hx2=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Hy,extrapolation_bc=0);
-        Hy2=interp.(x,y');
-        integral1=trapz((x,y),Ex1.*Hy1-Ey1.*Hx1)*0.5;
-        integral2=trapz((x,y),Ex2.*Hy2-Ey2.*Hx2)*0.5;
-        integral=trapz((x,y),Ex1.*Hy2-Ey1.*Hx2)*0.5;
-        return integral/sqrt(integral1*integral2);
-    end
-end
-
-"""
-    overlap(f1::VectorField,m2::VectorMode)
-"""
-function overlap(f1::VectorField,m2::VectorMode)
-    if ((isempty(f1.x)) || (isempty(m2.x)))
-        throw(ArgumentError("At least one of the two modes does not have a field"));
-    end
-    if ((f1.x==m2.x) && (f1.y==m2.y))
-        integral2=trapz((m2.x,m2.y),m2.Ex.*m2.Hy-m2.Ey.*m2.Hx)*0.5;
-        integral=trapz((m2.x,m2.y),f1.Ex.*m2.Hy-f1.Ey.*m2.Hx)*0.5;
-        return integral/sqrt(integral2);
-    else
-        x=unique(sort(vcat(f1.x,m2.x)));
-        y=unique(sort(vcat(f1.y,m2.y)));
-        interp=LinearInterpolation((f1.x,f1.y),f1.Ex,extrapolation_bc=0);
-        Ex1=interp.(x,y');
-        interp=LinearInterpolation((f1.x,f1.y),f1.Ey,extrapolation_bc=0);
-        Ey1=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Ex,extrapolation_bc=0);
-        Ex2=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Ey,extrapolation_bc=0);
-        Ey2=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Hx,extrapolation_bc=0);
-        Hx2=interp.(x,y');
-        interp=LinearInterpolation((m2.x,m2.y),m2.Hy,extrapolation_bc=0);
-        Hy2=interp.(x,y');
-        integral2=trapz((x,y),Ex2.*Hy2-Ey2.*Hx2)*0.5;
-        integral=trapz((x,y),Ex1.*Hy2-Ey1.*Hx2)*0.5;
-        return integral/sqrt(integral2);
-    end
-end
-
-"""
-    overlap(m1::VectorMode,f2::VectorField)
-"""
-function overlap(m1::VectorMode,f2::VectorField)
-    return conj(overlap(f2,m1));
-end
-
-"""
-    overlap(m1::ScalarModeFEM,m2::ScalarModeFEM)
-"""
-function overlap(m1::ScalarModeFEM,m2::ScalarModeFEM)
-    if (m1.Ω!=m2.Ω)
-        throw(ArgumentError("The modes must have the same triangulation Ω"));
-    else
-        integral1=sum(integrate(abs2(m1.E),m1.dΩ));
-        integral2=sum(integrate(abs2(m2.E),m2.dΩ));
-        integral=sum(integrate(m1.E*conj(m2.E),m2.dΩ));
-        return integral/sqrt(integral1*integral2);
-    end
-end
-
-"""
-    overlap(m1::ScalarModeFEM,m2::ScalarfieldFEM)
-"""
-function overlap(m1::ScalarModeFEM,m2::ScalarFieldFEM)
-    if (m1.Ω!=m2.Ω)
-        throw(ArgumentError("The modes must have the same triangulation Ω"));
-    else
-        integral1=sum(integrate(abs2(m1.E),m1.dΩ));
-        integral=sum(integrate(m1.E*conj(m2.E),m2.dΩ));
-        return integral/sqrt(integral1);
-    end
-end
-
-"""
-    overlap(m1::ScalarModeFEM,m2::ScalarfieldFEM)
-"""
-function overlap(m1::ScalarFieldFEM,m2::ScalarModeFEM)
-    return conj(overlap(m2,m1))
-end
-
-"""
-    overlap(m1::ScalarFieldFEM,m2::ScalarfieldFEM)
-"""
-function overlap(m1::ScalarFieldFEM,m2::ScalarFieldFEM)
+function overlap(m1::Union{ScalarFieldFEM,ScalarModeFEM},m2::Union{ScalarFieldFEM,ScalarModeFEM})
     if (m1.Ω!=m2.Ω)
         throw(ArgumentError("The modes must have the same triangulation Ω"));
     else
@@ -1013,45 +868,10 @@ function overlap(m1::ScalarFieldFEM,m2::ScalarFieldFEM)
     end
 end
 
-function overlap(m1::VectorModeFEM,m2::VectorModeFEM)
-    if (m1.Ω!=m2.Ω)
-        throw(ArgumentError("The modes must have the same triangulation Ω"));
-    else
-        integral1_task=Threads.@spawn 0.5*abs(sum(integrate(m1.Ex*conj(m1.Hy)-m1.Ey*conj(m1.Hx),m1.dΩ)));
-        integral2_task=Threads.@spawn 0.5*abs(sum(integrate(m2.Ex*conj(m2.Hy)-m2.Ey*conj(m2.Hx),m2.dΩ)));
-        integral_task=Threads.@spawn 0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
-        integral1=fetch(integral1_task);
-        integral2=fetch(integral2_task);
-        integral=fetch(integral_task);
-        return integral/sqrt(integral1*integral2);
-    end
-end
-
-function overlap(m1::VectorModeFEM,m2::VectorFieldFEM)
-    if (m1.Ω!=m2.Ω)
-        throw(ArgumentError("The modes must have the same triangulation Ω"));
-    else
-        integral1_task=Threads.@spawn 0.5*abs(sum(integrate(m1.Ex*conj(m1.Hy)-m1.Ey*conj(m1.Hx),m1.dΩ)));
-        integral_task=Threads.@spawn 0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
-        integral1=fetch(integral1_task);
-        integral=fetch(integral_task);
-        return integral/sqrt(integral1);
-    end
-end
-
-function overlap(m1::VectorFieldFEM,m2::VectorModeFEM)
-    if (m1.Ω!=m2.Ω)
-        throw(ArgumentError("The modes must have the same triangulation Ω"));
-    else
-        integral2_task=Threads.@spawn 0.5*abs(sum(integrate(m2.Ex*conj(m2.Hy)-m2.Ey*conj(m2.Hx),m2.dΩ)));
-        integral_task =Threads.@spawn 0.5*sum(integrate(m1.Ex*conj(m2.Hy)-m1.Ey*conj(m2.Hx),m1.dΩ));
-        integral2=fetch(integral2_task);
-        integral=fetch(integral_task);
-        return integral/sqrt(integral2);
-    end
-end
-
-function overlap(m1::VectorFieldFEM,m2::VectorFieldFEM)
+"""
+    overlap(m1::Union{VectorFieldFEM,VectorModeFEM},m2::Union{VectorFieldFEM,VectorModeFEM})
+"""
+function overlap(m1::Union{VectorFieldFEM,VectorModeFEM},m2::Union{VectorFieldFEM,VectorModeFEM})
     if (m1.Ω!=m2.Ω)
         throw(ArgumentError("The modes must have the same triangulation Ω"));
     else
@@ -1060,16 +880,13 @@ function overlap(m1::VectorFieldFEM,m2::VectorFieldFEM)
     end
 end
 
-
-
-
 ############################# Effective area #############################
 """
     Aeff(m::ScalarMode1D)
 """
 function Aeff(m::ScalarMode1D)
-    E2=trapz(m.r,2*pi*m.r.*(m.E).^2);
-    E4=trapz(m.r,2*pi*m.r.*(m.E).^4);
+    E2=trapz(m.r,2*pi*m.r.*abs2.(m.E));
+    E4=trapz(m.r,2*pi*m.r.*(abs2.(m.E)).^2);
     if (m.nu!=0)
         E2=E2*0.5;
         E4=E4*3.0/8.0;
@@ -1081,8 +898,8 @@ end
     Aeff(m::ScalarMode2D)
 """
 function Aeff(m::ScalarMode2D)
-    E2=trapz((m.x,m.y),(m.E).^2);
-    E4=trapz((m.x,m.y),(m.E).^4);
+    E2=trapz((m.x,m.y),abs2.(m.E));
+    E4=trapz((m.x,m.y),(abs2.(m.E)).^2);
     return E2^2/E4;
 end
 
@@ -1094,22 +911,42 @@ n0 must be a constant or a function of x and y.
 If n0=0, this function assumes that n0≃neff (correct for weakly-guiding fibers).
 """
 function Aeff(m::VectorMode,n0::Union{Real,Function}=0)
-    #Approximation (neff=n0)
-    E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
-    if isa(n0,Function)
-        if (first(methods(n0)).nargs!=3)
-            throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
-        end
-        E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x',m.y).^2));
-        E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x',m.y).^2));
-        return E2^2/E4_1*mu0/eps0,E2^2/E4_2*mu0/eps0;
-    else
-        E4_1=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez)));
-        E4_2=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez)));
-        if (n0==0)
-            return E2^2/E4_1*mu0/eps0/(m.neff)^2,E2^2/E4_2*mu0/eps0/(m.neff)^2;
+    if (typeof(m.neff)==Float64)
+        E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
+        if isa(n0,Function)
+            if (first(methods(n0)).nargs!=3)
+                throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
+            end
+            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(real.(n0.(m.x',m.y)).^2));
+            E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(real.(n0.(m.x',m.y)).^2));
+            return E2^2/E4_1*mu0/eps0,E2^2/E4_2*mu0/eps0;
         else
-            return E2^2/E4_1*mu0/eps0/n0^2,E2^2/E4_2*mu0/eps0/n0^2;
+            E4_1=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez)));
+            E4_2=trapz((m.x,m.y),abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez)));
+            if (n0==0)
+                return E2^2/E4_1*mu0/eps0/(m.neff)^2,E2^2/E4_2*mu0/eps0/(m.neff)^2;
+            else
+                return E2^2/E4_1*mu0/eps0/real(n0)^2,E2^2/E4_2*mu0/eps0/real(n0)^2;
+            end
+        end
+    else
+        if isa(n0,Function)
+            if (first(methods(n0)).nargs!=3)
+                throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
+            end
+            E2=trapz((m.x,m.y),m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx));
+            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(real.(n0.(m.x',m.y)).^2));
+            E4_2=trapz((m.x,m.y),(abs2.(m.Ex.^2+m.Ey.^2+m.Ez.^2)).*(real.(n0.(m.x',m.y)).^2));
+            return real(E2)^2/E4_1*mu0/eps0,real(E2)^2/E4_2*mu0/eps0;
+        else
+            E2=trapz((m.x,m.y),m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx));
+            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))));
+            E4_2=trapz((m.x,m.y),(abs2.(m.Ex.^2+m.Ey.^2+m.Ez.^2)));
+            if (n0==0)
+                return real(E2)^2/E4_1*mu0/eps0/(real(m.neff))^2,real(E2)^2/E4_2*mu0/eps0/(real(m.neff))^2;
+            else
+                return real(E2)^2/E4_1*mu0/eps0/real(n0)^2,real(E2)^2/E4_2*mu0/eps0/real(n0)^2;
+            end
         end
     end
 end
@@ -1134,12 +971,11 @@ n0 must be a constant or a function of x and y.
 If n0=0, this function assumes that n0≃neff (correct for weakly-guiding fibers).
 """
 function Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
-    #Approximation (real(neff)=n0)
     if isa(n0,Function)
         if (first(methods(n0)).nargs!=3)
             throw(DomainError(n0, "The refractive index function n0 must have 2 argument (x,y)"));
         end
-        n02=x->n0(x[1],x[2])^2;
+        n02=x->real(n0(x[1],x[2]))^2;
         E2_task=Threads.@spawn sum(integrate(m.Ex*conj(m.Hy)-m.Ey*conj(m.Hx),m.dΩ));
         E4_1_task=Threads.@spawn sum(integrate(n02*abs2(abs2(m.Ex)+abs2(m.Ey)+abs2(m.Ez)),m.dΩ));
         E4_2_task=Threads.@spawn sum(integrate(n02*abs2(m.Ex*m.Ex+m.Ey*m.Ey+m.Ez*m.Ez),m.dΩ));
@@ -1157,7 +993,7 @@ function Aeff(m::VectorModeFEM,n0::Union{Real,Function}=0)
         if (n0==0)
             return real(E2)^2/E4_1*mu0/eps0/(real(m.neff))^2,real(E2)^2/E4_2*mu0/eps0/(real(m.neff))^2;
         else
-            return real(E2)^2/E4_1*mu0/eps0/n0^2,real(E2)^2/E4_2*mu0/eps0/n0^2;
+            return real(E2)^2/E4_1*mu0/eps0/real(n0)^2,real(E2)^2/E4_2*mu0/eps0/real(n0)^2;
         end
     end
 end
@@ -1177,8 +1013,8 @@ function nonLinearCoefficient(m::ScalarMode1D,n2::Union{Real,Function})
         if (first(methods(n2)).nargs!=2)
             throw(DomainError(n2, "The non-linear index function must have 1 argument"));
         end
-        E2=trapz(m.r,2*pi*m.r.*(m.E).^2);
-        E4=trapz(m.r,2*pi*(m.r.*(m.E).^4).*n2.(m.r));
+        E2=trapz(m.r,2*pi*m.r.*abs2.(m.E));
+        E4=trapz(m.r,2*pi*(m.r.*(abs2.(m.E)).^2).*n2.(m.r));
         if (m.nu!=0)
             E2=E2*0.5;
             E4=E4*3.0/8.0;
@@ -1200,8 +1036,8 @@ function nonLinearCoefficient(m::ScalarMode2D,n2::Union{Real,Function})
         if (first(methods(n2)).nargs!=3)
             throw(DomainError(n2, "The non-linear index function must have 2 argument"));
         end
-        E2=trapz((m.x,m.y),(m.E).^2);
-        E4=trapz((m.x,m.y),((m.E).^4).*n2.(m.x,m.y'));
+        E2=trapz((m.x,m.y),abs2.(m.E));
+        E4=trapz((m.x,m.y),((abs2.(m.E)).^2).*n2.(m.x,m.y'));
         k0=2*pi/m.lambda;
         return E4/(E2^2)*k0;
     end
@@ -1221,24 +1057,46 @@ function nonLinearCoefficient(m::VectorMode,n2::Union{Real,Function},n0::Union{R
         if (first(methods(n2)).nargs!=3)
             throw(DomainError(n2, "The non-linear index function must have 2 argument"));
         end
-        E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
-        k0=2*pi/m.lambda;
-        if (isa(n0,Real))
-            if (n0==0)
-                nn=m.neff^2;
+        if (typeof(m.neff)==Float64)
+            E2=trapz((m.x,m.y),m.Ex.*m.Hy-m.Ey.*m.Hx);
+            k0=2*pi/m.lambda;
+            if (isa(n0,Real))
+                if (n0==0)
+                    nn=m.neff^2;
+                else
+                    nn=n0^2;
+                end
+                E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*n2.(m.x,m.y'));
+                E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*n2.(m.x,m.y'));
+                return 1.0/(E2^2/E4_1*mu0/eps0)*k0*nn,1.0/(E2^2/E4_2*mu0/eps0)*k0*nn;
             else
-                nn=n0^2;
+                if (first(methods(n0)).nargs!=3)
+                    throw(DomainError(n0, "The refractive index n0 function must have 2 argument"));
+                end
+                E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
+                E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
+                return 1.0/(E2^2/E4_1*mu0/eps0)*k0,1.0/(E2^2/E4_2*mu0/eps0)*k0;
             end
-            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*n2.(m.x,m.y'));
-            E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*n2.(m.x,m.y'));
-            return 1.0/(E2^2/E4_1*mu0/eps0)*k0*nn,1.0/(E2^2/E4_2*mu0/eps0)*k0*nn;
         else
-            if (first(methods(n0)).nargs!=3)
-                throw(DomainError(n0, "The refractive index n0 function must have 2 argument"));
+            E2=real(trapz((m.x,m.y),m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx)));
+            k0=2*pi/m.lambda;
+            if (isa(n0,Real))
+                if (n0==0)
+                    nn=real(m.neff)^2;
+                else
+                    nn=real(n0)^2;
+                end
+                E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*n2.(m.x,m.y'));
+                E4_2=trapz((m.x,m.y),(abs2.(m.Ex.^2+m.Ey.^2+m.Ez.^2)).*n2.(m.x,m.y'));
+                return 1.0/(E2^2/E4_1*mu0/eps0)*k0*nn,1.0/(E2^2/E4_2*mu0/eps0)*k0*nn;
+            else
+                if (first(methods(n0)).nargs!=3)
+                    throw(DomainError(n0, "The refractive index n0 function must have 2 argument"));
+                end
+                E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(real.(n0.(m.x,m.y')).^2).*n2.(m.x,m.y'));
+                E4_2=trapz((m.x,m.y),(abs2.(m.Ex.^2+m.Ey.^2+m.Ez.^2)).*(real.(n0.(m.x,m.y')).^2).*n2.(m.x,m.y'));
+                return 1.0/(E2^2/E4_1*mu0/eps0)*k0,1.0/(E2^2/E4_2*mu0/eps0)*k0;
             end
-            E4_1=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)+abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
-            E4_2=trapz((m.x,m.y),(abs2.(abs2.(m.Ex)+abs2.(m.Ey)-abs2.(m.Ez))).*(n0.(m.x,m.y').^2).*n2.(m.x,m.y'));
-            return 1.0/(E2^2/E4_1*mu0/eps0)*k0,1.0/(E2^2/E4_2*mu0/eps0)*k0;
         end
     end
 end
@@ -1317,7 +1175,7 @@ end
     MFD(m::ScalarMode1D)
 """
 function MFD(m::ScalarMode1D)
-    pos=argmin(abs.(abs.(m.E).-(maximum(abs.(m.E))/exp(1))));
+    pos=argmin(abs.(abs.(m.E).-(maximum(abs.(m.E))/ℯ)));
     return 2*m.r[pos];
 end
 
@@ -1334,7 +1192,7 @@ function MFD(m::ScalarMode2D,theta::Real=0)
     interp=LinearInterpolation((m.x,m.y),m.E,extrapolation_bc=0);
     E=interp.(x,y);
     posmax=argmax(abs.(E));
-    pos=argmin(abs.(abs.(E).-(maximum(abs.(E))/exp(1))));
+    pos=argmin(abs.(abs.(E).-(maximum(abs.(E))/ℯ)));
     return abs(2*(r[pos]-r[posmax]));
 end
 
@@ -1348,11 +1206,11 @@ function MFD(m::VectorMode,theta::Real=0)
     r=collect(LinRange(-rmax,rmax,nb));
     x=r*cosd(theta);
     y=r*sind(theta);
-    Pz=m.Ex.*m.Hy-m.Ey.*m.Hx;
+    Pz=real.(m.Ex.*conj(m.Hy)-m.Ey.*conj(m.Hx));
     interp=LinearInterpolation((m.x,m.y),Pz,extrapolation_bc=0);
     E2=interp.(x,y);
     posmax=argmax(abs.(E2));
-    pos=argmin(abs.(abs.(E2).-(maximum(abs.(E2))/exp(2))));
+    pos=argmin(abs.(abs.(E2).-(maximum(abs.(E2))/(ℯ^2))));
     return abs(2*(r[pos]-r[posmax]));
 end
 
@@ -1374,7 +1232,7 @@ function MFD(m::ScalarModeFEM,theta::Real=0)
         end
     end
     posmax=argmax(abs.(E));
-    pos=argmin(abs.(abs.(E).-(maximum(abs.(E))/exp(1))));
+    pos=argmin(abs.(abs.(E).-(maximum(abs.(E))/ℯ)));
     return abs(2*(r[pos]-r[posmax]));
 end
 
@@ -1397,7 +1255,7 @@ function MFD(m::VectorModeFEM,theta::Real=0)
         end
     end
     posmax=argmax(abs.(Pz));
-    pos=argmin(abs.(abs.(Pz).-(maximum(abs.(Pz))/exp(2))));
+    pos=argmin(abs.(abs.(Pz).-(maximum(abs.(Pz))/(ℯ^2))));
     return abs(2*(r[pos]-r[posmax]));
 end
 
