@@ -8,10 +8,10 @@ m11=m1[1]</code></pre><p>Note that you can also use broadcasting to compute all 
 m01=m[1][1];
 m11=m[2][1];</code></pre><p>It is possible to plot the mode profile:</p><pre><code class="language-julia hljs">using Plots
 plot(m01.r,m01.E,label=m01.Name)
-plot!(m11.r,m11.E,label=m11.Name)</code></pre><img src="ce8b4fa4.svg" alt="Example block output"/><p>In order to visualize the modes in a 2D plot, one should use the conversion from <code>ScalarMode1D</code> to <code>ScalarMode2D</code>. Be careful when using <code>Plots.jl</code>: unlike this package, the second index of the matrix corresponds to the x-coordinate (as matlab but the opposite of <code>Makie.jl</code>).</p><pre><code class="language-julia hljs">mm01=ScalarMode2D(m01);
+plot!(m11.r,m11.E,label=m11.Name)</code></pre><img src="bfed8bff.svg" alt="Example block output"/><p>In order to visualize the modes in a 2D plot, one should use the conversion from <code>ScalarMode1D</code> to <code>ScalarMode2D</code>. Be careful when using <code>Plots.jl</code>: unlike this package, the second index of the matrix corresponds to the x-coordinate (as matlab but the opposite of <code>Makie.jl</code>).</p><pre><code class="language-julia hljs">mm01=ScalarMode2D(m01);
 mm11s=ScalarMode2D(m11,sincos=&#39;s&#39;);
 mm11c=ScalarMode2D(m11,sincos=&#39;c&#39;);
-contourf(mm11c.x,mm11c.y,mm11c.E&#39;,levels=100,linewidth=0)</code></pre><img src="275042e2.svg" alt="Example block output"/><p>To observe the beating between the LP01 and the LP11, the modes must be first normalized. Then, the addition of the two fields at the distance z ∈ [0,214] µm is required. The beating length is <span>$\frac{2\pi}{\vert \Delta \beta \vert} = \frac{\lambda}{\vert \Delta n_{eff} \vert}= 107$</span> µm</p><pre><code class="language-julia hljs">normalize!(mm01)
+contourf(mm11c.x,mm11c.y,mm11c.E&#39;,levels=100,linewidth=0)</code></pre><img src="38b55025.svg" alt="Example block output"/><p>To observe the beating between the LP01 and the LP11, the modes must be first normalized. Then, the addition of the two fields at the distance z ∈ [0,214] µm is required. The beating length is <span>$\frac{2\pi}{\vert \Delta \beta \vert} = \frac{\lambda}{\vert \Delta n_{eff} \vert}= 107$</span> µm</p><pre><code class="language-julia hljs">normalize!(mm01)
 normalize!(mm11c)
 normalize!(mm11s)
 L=1/(m01.neff-m11.neff)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">106.89413338381357</code></pre><pre><code class="language-julia hljs">anim=@animate for j=0:214
@@ -28,7 +28,7 @@ gif(anim,&quot;anim_field.gif&quot;,fps=15)</code></pre><img src="e640628f.gif" 
  [&quot;HE 2,1a&quot;,1.4537386807206427,1.0,[-10.0,10.0],[-10.0,10.0],[0.0,8.183586213971765],[0.0,8.183586213971765],[0.0,0.9999752349350604],[0.0,0.03199511348865891],[0.0,0.03199511348865891],[0.0,0.0037587703512342654]]</code></pre><p>Then, the Poynting Vector of the mode HE<span>$_{21}$</span> can be computed and plotted:</p><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(mv2[1]);
 contourf(mv2[1].x,mv2[1].y,Pz&#39;,linewidth=0,levels=100,xlims=(-4,4),ylims=(-4,4))
 X,Y=meshgrid(mv2[1].x,mv2[1].y);
-quiver!(X[5:5:end,5:5:end],Y[5:5:end,5:5:end],quiver=(mv2[1].Ex[5:5:end,5:5:end]&#39;/20,mv2[1].Ey[5:5:end,5:5:end]&#39;/20),color=:cyan,arrow=arrow(:closed))</code></pre><img src="e263e1df.svg" alt="Example block output"/><p>In order to check the orthoganality of the modes, we can normalize them and compute the overlap integrals:</p><pre><code class="language-julia hljs">mv=[mv0;mv1;mv2];
+quiver!(X[5:5:end,5:5:end],Y[5:5:end,5:5:end],quiver=(mv2[1].Ex[5:5:end,5:5:end]&#39;/20,mv2[1].Ey[5:5:end,5:5:end]&#39;/20),color=:cyan,arrow=arrow(:closed))</code></pre><img src="46709544.svg" alt="Example block output"/><p>In order to check the orthoganality of the modes, we can normalize them and compute the overlap integrals:</p><pre><code class="language-julia hljs">mv=[mv0;mv1;mv2];
 normalize!.(mv);
 overlap.(mv,transpose(mv))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6×6 Matrix{Float64}:
   1.0           4.63133e-19   1.57427e-17  …  -2.58123e-18  -4.71317e-17
@@ -43,7 +43,7 @@ lambda=1:0.01:1.5;
 f=[r-&gt;n_Ge_Doped_Silica(l*1e-6,0)+(n_Ge_Doped_Silica(l*1e-6,0.2)-n_Ge_Doped_Silica(l*1e-6,0))*(r&lt;=3.5)*(1-r^2/3.5^2) for l in lambda];
 r=0:0.1:5;
 plot(r,f[1].(r),label=&quot;λ = 1 µm&quot;,xlabel=&quot;r (µm)&quot;,ylabel=&quot;Refractive index&quot;);
-plot!(r,f[end].(r),label=&quot;λ = 1.5 µm&quot;)</code></pre><img src="820c5fd3.svg" alt="Example block output"/><p>The modal content is then computed:</p><pre><code class="language-julia hljs">using OpticalFibers.ModeSolvers
+plot!(r,f[end].(r),label=&quot;λ = 1.5 µm&quot;)</code></pre><img src="79c12f23.svg" alt="Example block output"/><p>The modal content is then computed:</p><pre><code class="language-julia hljs">using OpticalFibers.ModeSolvers
 m=FD.(lambda,[0,1,2]&#39;,2,f,1000,10);
 #mode LP01 always exists
 neff01=[m[j,1][1].neff for j in 1:length(lambda)];
@@ -55,16 +55,16 @@ N21=sum((length.(m[:,3])).&gt;=1);
 neff21=[m[j,3][1].neff for j in 1:N21];
 plot(lambda,n_Ge_Doped_Silica.(lambda*1E-6,0),label=&quot;Silica&quot;,xlabel=&quot;λ (µm)&quot;,ylabel=&quot;Effective index&quot;,color=:black);
 plot!(lambda,n_Ge_Doped_Silica.(lambda*1E-6,0.2),label=&quot;Ge-doped Silica (20%)&quot;,color=:black,line=:dash);
-plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=[&quot;LP01&quot; &quot;LP11&quot; &quot;LP02&quot; &quot;LP21&quot;])</code></pre><img src="0d0500a1.svg" alt="Example block output"/><p>The second-order dispersion is defined by <span>$\beta_2=\frac{\partial^2 \beta}{\partial \omega^2}$</span>.</p><pre><code class="language-julia hljs">beta01=neff01*2*pi./lambda*1E6;
+plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=[&quot;LP01&quot; &quot;LP11&quot; &quot;LP02&quot; &quot;LP21&quot;])</code></pre><img src="722bd610.svg" alt="Example block output"/><p>The second-order dispersion is defined by <span>$\beta_2=\frac{\partial^2 \beta}{\partial \omega^2}$</span>.</p><pre><code class="language-julia hljs">beta01=neff01*2*pi./lambda*1E6;
 omega=2*pi*OpticalFibers.PhysicalData.c./lambda*1E6;
 omega2,beta2=derivative((omega,beta01),2);
 lambda2=2*pi*OpticalFibers.PhysicalData.c./omega2*1E6;
-plot(lambda2,beta2*1E26,xlabel=&quot;λ (µm)&quot;,ylabel=&quot;β₂ (10⁻²⁶ s²/m)&quot;)</code></pre><img src="aebb31a6.svg" alt="Example block output"/><p>To compute the effective area and the non-linear coefficient, the fields must be calculated:</p><pre><code class="language-julia hljs">m=FD.(lambda,0,1,f,1000,10,field=true);
+plot(lambda2,beta2*1E26,xlabel=&quot;λ (µm)&quot;,ylabel=&quot;β₂ (10⁻²⁶ s²/m)&quot;)</code></pre><img src="15f4204e.svg" alt="Example block output"/><p>To compute the effective area and the non-linear coefficient, the fields must be calculated:</p><pre><code class="language-julia hljs">m=FD.(lambda,0,1,f,1000,10,field=true);
 m=[m[i][1] for i in 1:length(lambda)];
 A=Aeff.(m);
 gamma=nonLinearCoefficient.(m,2.53E-20)*1E21;
 plot(lambda,A,label=&quot;Aeff&quot;,ylabel=&quot;Effective area (µm²)&quot;,xlabel=&quot;λ (µm)&quot;,color=:blue,leg=:topright);
-plot!(twinx(),lambda,gamma,label=&quot;γ&quot;,ylabel=&quot;Non-linear coefficient ((W.km)⁻¹)&quot;,color=:red,leg=:topleft)</code></pre><img src="a4e6ee08.svg" alt="Example block output"/><h2 id="FEM:-Step-index-fiber"><a class="docs-heading-anchor" href="#FEM:-Step-index-fiber">FEM: Step-index fiber</a><a id="FEM:-Step-index-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#FEM:-Step-index-fiber" title="Permalink"></a></h2><p>As an example, we will compute the five first vector modes in a step-index fiber with a 1 µm-core radius, a refractive index of <span>$\sqrt{3}$</span> in the core and 1 in the cladding. The mesh was generated with GMSH.</p><pre><code class="language-julia hljs">using OpticalFibers
+plot!(twinx(),lambda,gamma,label=&quot;γ&quot;,ylabel=&quot;Non-linear coefficient ((W.km)⁻¹)&quot;,color=:red,leg=:topleft)</code></pre><img src="011c4c06.svg" alt="Example block output"/><h2 id="FEM:-Step-index-fiber"><a class="docs-heading-anchor" href="#FEM:-Step-index-fiber">FEM: Step-index fiber</a><a id="FEM:-Step-index-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#FEM:-Step-index-fiber" title="Permalink"></a></h2><p>As an example, we will compute the five first vector modes in a step-index fiber with a 1 µm-core radius, a refractive index of <span>$\sqrt{3}$</span> in the core and 1 in the cladding. The mesh was generated with GMSH.</p><pre><code class="language-julia hljs">using OpticalFibers
 using OpticalFibers.ModeSolvers
 using Gridap
 using GridapGmsh
@@ -99,7 +99,7 @@ m0=FD(1.6,0,10,f,1000,15,field=true,rPML=12)</code></pre><pre class="documenter-
  [&quot;LP - ℓ=0 - mode 9&quot;,1.4321915921204398 - 0.02964845152566257im,1.6,0,[0.0,15.0],[3.587032257272174e-6,0.09396032736598095]]
  [&quot;LP - ℓ=0 - mode 10&quot;,1.4912962978621942 - 0.051527442488204865im,1.6,0,[0.0,15.0],[1.1335356147783201e-9,0.11100627914696418]]</code></pre><p>The LP01 mode is the mode 1. Since its effective index is greater than the refractive index of the cladding, this mode is guided and its losses are not significant.</p><p>The LP02 mode is the mode 7, its losses in dB/km can be calculated:</p><pre><code class="language-julia hljs">losses(m0[7])*1e6</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1.2974523901207896e6</code></pre><pre><code class="language-julia hljs">using Plots
 plot(m0[1].r,-real.(m0[1].E),xlabel=&quot;r (µm)&quot;,ylabel=&quot;real(E)&quot;,label=&quot;LP01&quot;)
-plot!(m0[7].r,-real.(m0[7].E),label=&quot;LP02&quot;)</code></pre><img src="ce4fdac0.svg" alt="Example block output"/><p>We can also compute the effective index of the LP11 mode:</p><pre><code class="language-julia hljs">m1=FD(1.6,1,10,f,1000,15,field=true,rPML=12)
+plot!(m0[7].r,-real.(m0[7].E),label=&quot;LP02&quot;)</code></pre><img src="4de2abea.svg" alt="Example block output"/><p>We can also compute the effective index of the LP11 mode:</p><pre><code class="language-julia hljs">m1=FD(1.6,1,10,f,1000,15,field=true,rPML=12)
 pos=argmin(losses.(m1)*1E6);
 m1[pos].neff</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1.4452235104934343 - 2.3339462583295887e-6im</code></pre><p>To compute the leaky vector modes that correspond to the LP11 mode, we can add a PML for the FEM solver:</p><pre><code class="language-julia hljs">using Gridap
 using GridapGmsh
@@ -108,10 +108,10 @@ permittivity=x-&gt;f(hypot(x[1],x[2]))^2;
 epsilon=add_cylindrical_PML(permittivity,12,3,10);
 mu=add_cylindrical_PML(x-&gt;1.0,12,3,10);
 m=FEM(1.6,4,epsilon,mu,model,real(m1[pos].neff),field=true,order=2,solver=:MUMPS)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{OpticalFibers.ModeSolvers.VectorModeFEM}:
- [Mode 1,1.445200657509651 - 2.3755267992291714e-6im,1.6,yes]
- [Mode 2,1.4450417028836748 - 2.377080667925433e-6im,1.6,yes]
- [Mode 3,1.4450417028245284 - 2.3770806385895124e-6im,1.6,yes]
- [Mode 4,1.4449793146581011 - 2.3512222708206717e-6im,1.6,yes]</code></pre><p>The field can be plotted using GridapMakie or saved (using the function &#39;writevtk&#39;) to a file that can be opened with ParaView.</p><pre><code class="language-julia hljs">using GridapMakie
+ [Mode 1,1.445200657509651 - 2.375526799223427e-6im,1.6,yes]
+ [Mode 2,1.4450417028836748 - 2.377080667967091e-6im,1.6,yes]
+ [Mode 3,1.4450417028245284 - 2.3770806385882935e-6im,1.6,yes]
+ [Mode 4,1.4449793146581011 - 2.351222270804991e-6im,1.6,yes]</code></pre><p>The field can be plotted using GridapMakie or saved (using the function &#39;writevtk&#39;) to a file that can be opened with ParaView.</p><pre><code class="language-julia hljs">using GridapMakie
 using GLMakie
 fig,ax,plot_obj=GLMakie.plot(m[end].Ω,real(m[1].Ex),axis=(aspect=DataAspect(),),colormap=:jet)
 Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM_PML_Ex.png" alt="Real(Ex) for the first mode"/></p><h2 id="FEM:-Photonic-Crystal-Fiber"><a class="docs-heading-anchor" href="#FEM:-Photonic-Crystal-Fiber">FEM: Photonic Crystal Fiber</a><a id="FEM:-Photonic-Crystal-Fiber-1"></a><a class="docs-heading-anchor-permalink" href="#FEM:-Photonic-Crystal-Fiber" title="Permalink"></a></h2><p>In a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begins at 8 µm from the fiber center and its thickness is 2 µm. </p><p><img src="../assets/PCF.png" alt="PCF mesh"/></p><p>First, the mesh is loaded:</p><pre><code class="language-julia hljs">using OpticalFibers
@@ -139,18 +139,18 @@ end
 epsilon=add_cylindrical_PML(eps_PCF,8,2,10);
 mu=add_cylindrical_PML(x-&gt;1.0,8,2,10);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">tensor3(OpticalFibers.var&quot;#pml_xx#40&quot;{Main.var&quot;#1#2&quot;, Int64, Int64, Int64}(Main.var&quot;#1#2&quot;(), 8, 2, 10), OpticalFibers.var&quot;#pml_xy#43&quot;{Main.var&quot;#1#2&quot;, Int64, Int64, Int64}(Main.var&quot;#1#2&quot;(), 8, 2, 10), OpticalFibers.var&quot;#zf#44&quot;(), OpticalFibers.var&quot;#pml_xy#43&quot;{Main.var&quot;#1#2&quot;, Int64, Int64, Int64}(Main.var&quot;#1#2&quot;(), 8, 2, 10), OpticalFibers.var&quot;#pml_yy#41&quot;{Main.var&quot;#1#2&quot;, Int64, Int64, Int64}(Main.var&quot;#1#2&quot;(), 8, 2, 10), OpticalFibers.var&quot;#zf#44&quot;(), OpticalFibers.var&quot;#zf#44&quot;(), OpticalFibers.var&quot;#zf#44&quot;(), OpticalFibers.var&quot;#pml_zz#42&quot;{Main.var&quot;#1#2&quot;, Int64, Int64, Int64}(Main.var&quot;#1#2&quot;(), 8, 2, 10))</code></pre><p>Then we can compute ten modes whose effective indices are close to the approximate value calculated for the fundamental mode at the wavelength of 1.3 µm:</p><pre><code class="language-julia hljs">neff_approx=approx_neff_PCF(1.3,1.5,2);
 m=FEM(1.3,10,epsilon,mu,model,neff_approx,field=true,order=2,solver=:MUMPS)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{OpticalFibers.ModeSolvers.VectorModeFEM}:
- [Mode 1,1.4224235276324433 - 0.022826588858873415im,1.3,yes]
- [Mode 2,1.4226463588838736 - 0.022748925822529787im,1.3,yes]
- [Mode 3,1.4228688953469117 - 0.02250419247491085im,1.3,yes]
- [Mode 4,1.42287199804175 - 0.02250363648884267im,1.3,yes]
- [Mode 5,1.4288548628513198 - 0.019655111771514126im,1.3,yes]
- [Mode 6,1.428787899996492 - 0.01950714145631008im,1.3,yes]
- [Mode 7,1.4287883247324007 - 0.019506591850613538im,1.3,yes]
- [Mode 8,1.4292043041127571 - 0.01890843734999826im,1.3,yes]
- [Mode 9,1.4134836231922907 - 4.347742378699443e-14im,1.3,yes]
- [Mode 10,1.4134823818567004 - 4.355722862480261e-14im,1.3,yes]</code></pre><p>The last two modes are fundamental modes. We can compute and plot the z-component of the Poynting vector of the last mode:</p><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(m[end]);
+ [Mode 1,1.4224235276324437 - 0.02282658885887404im,1.3,yes]
+ [Mode 2,1.422646358883874 - 0.022748925822529863im,1.3,yes]
+ [Mode 3,1.4228688953469115 - 0.022504192474910197im,1.3,yes]
+ [Mode 4,1.4228719980417501 - 0.02250363648884228im,1.3,yes]
+ [Mode 5,1.4288548628513194 - 0.019655111771513727im,1.3,yes]
+ [Mode 6,1.4287878999964918 - 0.01950714145630964im,1.3,yes]
+ [Mode 7,1.4287883247324005 - 0.01950659185061394im,1.3,yes]
+ [Mode 8,1.4292043041127571 - 0.018908437349998048im,1.3,yes]
+ [Mode 9,1.4134836231922907 - 4.346077578897855e-14im,1.3,yes]
+ [Mode 10,1.4134823818567004 - 4.355971503581387e-14im,1.3,yes]</code></pre><p>The last two modes are fundamental modes. We can compute and plot the z-component of the Poynting vector of the last mode:</p><pre><code class="language-julia hljs">Px,Py,Pz=PoyntingVector(m[end]);
 fig,ax,plot_obj=GLMakie.plot(m[end].Ω,Pz,axis=(aspect=DataAspect(),),colormap=:jet)
 ax.xlabel=&quot;x (µm)&quot;;
 ax.ylabel=&quot;y (µm)&quot;;
 ax.title=&quot;neff = $(m[end].neff)&quot;;
-Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM2_Pz.png" alt="Pz for FM computed with FEM"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../PhysicalData/">« PhysicalData</a><a class="docs-footer-nextpage" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 24 January 2024 09:51">Wednesday 24 January 2024</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM2_Pz.png" alt="Pz for FM computed with FEM"/></p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../PhysicalData/">« PhysicalData</a><a class="docs-footer-nextpage" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="auto">Automatic (OS)</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.2.1 on <span class="colophon-date" title="Wednesday 24 January 2024 10:17">Wednesday 24 January 2024</span>. Using Julia version 1.9.4.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
