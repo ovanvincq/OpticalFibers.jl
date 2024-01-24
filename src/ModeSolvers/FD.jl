@@ -1,15 +1,5 @@
-
-#FD(1E-6,0,1,x->1.48-0.03*(x>2E-6),1000,10E-6)
-#lambda=collect(1:0.1:1.5);
-#f=[x->Ge_DopedSilica_Fleming(l,0)+0.05*(1-(x>2)) for l in lambda];
-#aa=FD.(lambda,0,2,f,1000,10);
-##bb=Vector{Vector{ScalarMode1D}}(undef,length(lambda));
-##for i=1:length(lambda)
-##    bb[i]=FD(lambda[i],0,2,f[i],1000,10);
-##end
-#Note pour mettre un vecteur en argument sans vectoriser, utiliser Ref
 """
-    FD(lambda::Real,l::Integer,mmax::Integer,fonc::Function,nb::Integer,rmax::Real;field::Bool=false,order::Integer=1,solver::Symbol=:Arpack,tol::Float64=0.0)
+    FD(lambda::Real,l::Integer,mmax::Integer,fonc::Function,nb::Integer,rmax::Real;field::Bool=false,order::Integer=1,solver::Symbol=:Arpack,tol::Float64=0.0,neff_approx::Real=0.0)
 
 Returns a vector of `ScalarMode1D` in the case of a cylindrically-symmetric weakly-guiding fiber.  
 
@@ -23,84 +13,16 @@ Returns a vector of `ScalarMode1D` in the case of a cylindrically-symmetric weak
 - order: order of the method to average the refractive index profile for each node (no averaging if order=1)
 - solver: can be :Arpack, :LU or :MUMPS
 - tol: tolerance for the eigenvalue solver (see documention of Arpack.jl or ArnoldiMethod.jl)
+- neff_approx: approximative value of the effective index of the mode. If neff_approx=0, neff_approx is fixed to the maximal value of the refractive index profile to compute the fundamental mode.
+- rPML: radius of the beginning of the PML
+- alphaPML: coefficient for the attenuation of the PML
 """
-function FD(lambda::Real,l::Integer,mmax::Integer,fonc::Function,nb::Integer,rmax::Real;field::Bool=false,order::Integer=1,solver::Symbol=:Arpack,tol::Float64=0.0)
-    if (lambda<=0)
-        throw(DomainError(lambda, "Wavelength must be strictly positive"));
-    end
-    if (l<0)
-        throw(DomainError(nu, "The azimuthal number must be positive"));
-    end
-    if (mmax<1)
-        throw(DomainError(mmax, "The number of modes must be strictly positive"));
-    end
-    if (rmax<=0)
-        throw(DomainError(rmax, "The maximum radius must be strictly positive"));
-    end
-    if (nb<2)
-        throw(DomainError(nb, "The number of points must be greater than 2"));
-    end
-    if (order<1)
-        throw(DomainError(order, "The Gauss-legendre order must be greater than 1"));
-    end
-    if (first(methods(fonc)).nargs!=2)
-        throw(DomainError(fonc, "The refractive index function must have 1 argument"));
-    end
-    if (tol<0.0)
-        throw(DomainError(tol, "The tolerance must be positive or null"));
-    end
-    h=rmax/(nb-1.0);
-    if (l>0)
-        U=LinRange(h,rmax,nb);
+function FD(lambda::Real,l::Integer,mmax::Integer,fonc::Function,nb::Integer,rmax::Real;field::Bool=false,order::Integer=1,solver::Symbol=:Arpack,tol::Float64=0.0,neff_approx::Real=0,rPML::Real=0,alphaPML::Real=10)
+    if (rPML>0)
+        FD_with_PML(lambda,l,mmax,fonc,nb,rmax,neff_approx,rPML,alphaPML;field=field,order=order,solver=solver,tol=tol)
     else
-        U=LinRange(h/2,rmax+h/2,nb);
+        FD_without_PML(lambda,l,mmax,fonc,nb,rmax;field=field,order=order,solver=solver,tol=tol,neff_approx=neff_approx)
     end
-    n=indexGaussSampling1D(U,order,fonc);
-    n_max=maximum(n);
-    n_cladding=n[end];
-    U=U/rmax;
-    h=h/rmax;
-    k0=2*pi/lambda;
-    A=@. (rmax^2*k0^2*n^2)-((l^2)/(U^2))-(2/h^2);
-    B=@. 0.5/h/U[1:(end-1)]+1/h^2;
-    C=@. -0.5/h/U[2:end]+1/h^2;
-    S=Tridiagonal(C,A,B);
-    if (solver==:Arpack)
-        D,V=eigs(S,nev=mmax,sigma=(k0*n_max*rmax)^2,tol=tol);
-    elseif (solver==:LU)
-        D,V=eigs_LU(S,nev=mmax,sigma=(k0*n_max*rmax)^2,tol=tol);
-    elseif (solver==:MUMPS)
-        D,V=eigs_MUMPS(S,nev=mmax,sigma=(k0*n_max*rmax)^2,tol=tol);
-    else
-        throw(DomainError(solver, "solver must be :Arpack, :LU or :MUMPS"));
-    end
-    neff=sqrt.(real(D)/k0^2/rmax^2);
-    if (field)
-        V=real(V[:,neff.>n_cladding]);
-        neff=neff[neff.>n_cladding];
-        if (l>0)
-            r=[0;U*rmax];
-            V=[zeros(1,length(neff));V];
-        else
-            U2=(U+circshift(U,-1))/2;
-            r=[0;U2[1:end-1]*rmax];
-            V2=(V+circshift(V,-1))/2;
-            V=[V[1,:]';V2[1:end-1,:]];
-        end
-        modes=Vector{ScalarMode1D}(undef,length(neff));
-        for i ∈ axes(neff,1)
-            name=string("LP ",string(l),",",string(i));
-            modes[i]=ScalarMode1D(name,neff[i],lambda,l,r,V[:,i]);
-        end
-    else
-        neff=neff[neff.>n_cladding];
-        modes=Vector{ScalarMode1D}(undef,length(neff));
-        for i ∈ axes(neff,1)
-            name=string("LP ",string(l),",",string(i));
-            modes[i]=ScalarMode1D(name,neff[i],lambda,l,[],[]);
-        end
-    end
-    return modes;
 end
 
 """
@@ -293,6 +215,186 @@ function vectorFD(lambda::Real,nbmax::Integer,fonc::Function,nbx::Integer,nby::I
         for i=1:length(neff)
             name=string("Mode ",string(i));
             modes[i]=VectorMode(name,neff[i],lambda);
+        end
+    end
+    return modes;
+end
+
+function FD_without_PML(lambda::Real,l::Integer,mmax::Integer,fonc::Function,nb::Integer,rmax::Real;field::Bool=false,order::Integer=1,solver::Symbol=:Arpack,tol::Float64=0.0,neff_approx::Real=0)
+    if (lambda<=0)
+        throw(DomainError(lambda, "Wavelength must be strictly positive"));
+    end
+    if (l<0)
+        throw(DomainError(nu, "The azimuthal number must be positive"));
+    end
+    if (mmax<1)
+        throw(DomainError(mmax, "The number of modes must be strictly positive"));
+    end
+    if (rmax<=0)
+        throw(DomainError(rmax, "The maximum radius must be strictly positive"));
+    end
+    if (nb<2)
+        throw(DomainError(nb, "The number of points must be greater than 2"));
+    end
+    if (order<1)
+        throw(DomainError(order, "The Gauss-legendre order must be greater than 1"));
+    end
+    if (first(methods(fonc)).nargs!=2)
+        throw(DomainError(fonc, "The refractive index function must have 1 argument"));
+    end
+    if (tol<0.0)
+        throw(DomainError(tol, "The tolerance must be positive or null"));
+    end  
+    h=rmax/(nb-1.0);
+    if (l>0)
+        U=LinRange(h,rmax,nb);
+    else
+        U=LinRange(h/2,rmax+h/2,nb);
+    end
+    n=indexGaussSampling1D(U,order,fonc);
+    n_max=maximum(n);
+    nameLP=false;
+    if (neff_approx<=0 || neff_approx>n_max)
+        neff_approx=n_max;
+        nameLP=true;
+    end
+    n_cladding=n[end];
+    U=U/rmax;
+    h=h/rmax;
+    k0=2*pi/lambda;
+    A=@. (rmax^2*k0^2*n^2)-((l^2)/(U^2))-(2/h^2);
+    B=@. 0.5/h/U[1:(end-1)]+1/h^2;
+    C=@. -0.5/h/U[2:end]+1/h^2;
+    S=Tridiagonal(C,A,B);
+    if (solver==:Arpack)
+        D,V=eigs(S,nev=mmax,sigma=(k0*neff_approx*rmax)^2,tol=tol);
+    elseif (solver==:LU)
+        D,V=eigs_LU(S,nev=mmax,sigma=(k0*neff_approx*rmax)^2,tol=tol);
+    elseif (solver==:MUMPS)
+        D,V=eigs_MUMPS(S,nev=mmax,sigma=(k0*neff_approx*rmax)^2,tol=tol);
+    else
+        throw(DomainError(solver, "solver must be :Arpack, :LU or :MUMPS"));
+    end
+    neff=sqrt.(real(D)/k0^2/rmax^2);
+    if (field)
+        V=real(V[:,neff.>n_cladding]);
+        neff=neff[neff.>n_cladding];
+        if (l>0)
+            r=[0;U*rmax];
+            V=[zeros(1,length(neff));V];
+        else
+            U2=(U+circshift(U,-1))/2;
+            r=[0;U2[1:end-1]*rmax];
+            V2=(V+circshift(V,-1))/2;
+            V=[V[1,:]';V2[1:end-1,:]];
+        end
+        modes=Vector{ScalarMode1D}(undef,length(neff));
+        for i ∈ axes(neff,1)
+            if (nameLP)
+                name=string("LP ",string(l),",",string(i));
+            else
+                name=string("LP - ℓ=",string(l)," - mode ",string(i));
+            end
+            modes[i]=ScalarMode1D(name,neff[i],lambda,l,r,V[:,i]);
+        end
+    else
+        neff=neff[neff.>n_cladding];
+        modes=Vector{ScalarMode1D}(undef,length(neff));
+        for i ∈ axes(neff,1)
+            if (nameLP)
+                name=string("LP ",string(l),",",string(i));
+            else
+                name=string("LP - ℓ=",string(l)," - mode ",string(i));
+            end
+            modes[i]=ScalarMode1D(name,neff[i],lambda,l);
+        end
+    end
+    return modes;
+end
+
+function FD_with_PML(lambda::Real,l::Integer,mmax::Integer,fonc::Function,nb::Integer,rmax::Real,neff_approx::Real,rPML::Real,alphaPML::Real;field::Bool=false,order::Integer=1,solver::Symbol=:Arpack,tol::Float64=0.0)
+    if (lambda<=0)
+        throw(DomainError(lambda, "Wavelength must be strictly positive"));
+    end
+    if (l<0)
+        throw(DomainError(nu, "The azimuthal number must be positive"));
+    end
+    if (mmax<1)
+        throw(DomainError(mmax, "The number of modes must be strictly positive"));
+    end
+    if (rmax<=0)
+        throw(DomainError(rmax, "The maximum radius must be strictly positive"));
+    end
+    if (nb<2)
+        throw(DomainError(nb, "The number of points must be greater than 2"));
+    end
+    if (order<1)
+        throw(DomainError(order, "The Gauss-legendre order must be greater than 1"));
+    end
+    if (first(methods(fonc)).nargs!=2)
+        throw(DomainError(fonc, "The refractive index function must have 1 argument"));
+    end
+    if (tol<0.0)
+        throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    if (alphaPML<=0.0)
+        throw(DomainError(alphaPML, "The attenuation of the PML must be positive"));
+    end
+    if (rPML>=rmax)
+        throw(DomainError(rPML, "rPML must be lower than rmax"));
+    end    
+    h=rmax/(nb-1.0);
+    if (l>0)
+        U=LinRange(h,rmax,nb);
+    else
+        U=LinRange(h/2,rmax+h/2,nb);
+    end
+    n=indexGaussSampling1D(U,order,fonc);
+    n_max=maximum(n);
+    if (neff_approx<=0 || neff_approx>n_max)
+        neff_approx=n_max;
+    end
+    alpha=alphaPML*(U.>rPML)
+    dPML=rmax-rPML;
+    f=1.0./(1.0.-im*alpha.*(U.-rPML).^2/dPML^2);
+    f2=2*im*alpha.*(U.-rPML)/dPML^2*rmax;
+    U=U/rmax;
+    h=h/rmax;
+    k0=2*pi/lambda;
+    A=@. (rmax^2*k0^2*n^2)-((l^2)/(U^2))-(2/h^2)*f^2;
+    B=@. 0.5/h*(f[1:(end-1)]/U[1:(end-1)]+f2[1:(end-1)]*f[1:(end-1)]^3)+f[1:(end-1)]^2/h^2;
+    C=@. -0.5/h*(f[2:end]/U[2:end]+f2[2:end]*f[2:end]^3)+f[2:end]^2/h^2;
+    S=Tridiagonal(C,A,B);
+    if (solver==:Arpack)
+        D,V=eigs(S,nev=mmax,sigma=(k0*neff_approx*rmax)^2,tol=tol);
+    elseif (solver==:LU)
+        D,V=eigs_LU(S,nev=mmax,sigma=(k0*neff_approx*rmax)^2,tol=tol);
+    elseif (solver==:MUMPS)
+        D,V=eigs_MUMPS(S,nev=mmax,sigma=(k0*neff_approx*rmax)^2,tol=tol);
+    else
+        throw(DomainError(solver, "solver must be :Arpack, :LU or :MUMPS"));
+    end
+    neff=sqrt.(D/k0^2/rmax^2);
+    if (field)
+        if (l>0)
+            r=[0;U*rmax];
+            V=[zeros(1,length(neff));V];
+        else
+            U2=(U+circshift(U,-1))/2;
+            r=[0;U2[1:end-1]*rmax];
+            V2=(V+circshift(V,-1))/2;
+            V=[transpose(V[1,:]);V2[1:end-1,:]];
+        end
+        modes=Vector{ScalarMode1D}(undef,length(neff));
+        for i ∈ axes(neff,1)
+            name=string("LP - ℓ=",string(l)," - mode ",string(i));
+            modes[i]=ScalarMode1D(name,neff[i],lambda,l,r,V[:,i]);
+        end
+    else
+        modes=Vector{ScalarMode1D}(undef,length(neff));
+        for i ∈ axes(neff,1)
+            name=string("LP - ℓ=",string(l)," - mode ",string(i));
+            modes[i]=ScalarMode1D(name,neff[i],lambda,l);
         end
     end
     return modes;
