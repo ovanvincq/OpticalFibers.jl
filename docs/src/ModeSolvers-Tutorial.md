@@ -12,8 +12,8 @@ This fiber is bimodal at $\lambda=1$ µm since the normalized frequency is $V=\f
 To compute the two modes, we can use the fuction `multi_step_fiber_modes` that returns a vector of modes:
 
 ```@example 1
-#using Pkg; nothing # hide
-#Pkg.activate("../.."); nothing # hide
+using Pkg; nothing # hide
+Pkg.activate("../.."); nothing # hide
 using OpticalFibers
 using OpticalFibers.ModeSolvers
 m0=multi_step_fiber_modes(1,0,2,[1.47,1.45],maxPosition=10);
@@ -83,6 +83,13 @@ Px,Py,Pz=PoyntingVector(mv2[1]);
 contourf(mv2[1].x,mv2[1].y,Pz',linewidth=0,levels=100,xlims=(-4,4),ylims=(-4,4))
 X,Y=meshgrid(mv2[1].x,mv2[1].y);
 quiver!(X[5:5:end,5:5:end],Y[5:5:end,5:5:end],quiver=(mv2[1].Ex[5:5:end,5:5:end]'/20,mv2[1].Ey[5:5:end,5:5:end]'/20),color=:cyan,arrow=arrow(:closed))
+```
+
+In order to check the orthoganality of the modes, we can normalize them and compute the overlap integrals:
+```@example 1
+mv=[mv0;mv1;mv2];
+normalize!.(mv);
+overlap.(mv,transpose(mv))
 ```
 
 ## Gradient index fiber
@@ -167,9 +174,65 @@ save("FEM1_Pz.png",fig); nothing #hide
 ```
 ![Pz for FM computed with FEM](FEM1_Pz.png)
 
+## Leaky modes in step index fiber with a low index trench
+In this example, we study a fiber with the parameters below:
+- core with a radius of 4 µm and a refractive index of 1.46
+- a trench located between 4 µm and 7 µm with a refractive index of 1.41
+- a cladding with a refractive index of 1.45
+
+In order to compute the leaky scalar modes at $\lambda=1.6$ µm, a PML must be added when using the 1-dimensional FD solver. The PML will be located between 12 µm and 15 µm.
+```@example 5
+using OpticalFibers
+using OpticalFibers.ModeSolvers
+f=r->1.46-0.05*(r<=7)*(r>=4)-0.01*(r>7);
+m0=FD(1.6,0,10,f,1000,15,field=true,rPML=12)
+```
+The LP01 mode is the mode 1. Since its effective index is greater than the refractive index of the cladding, this mode is guided and its losses are not significant.
+
+The LP02 mode is the mode 7, its losses in dB/km can be calculated:
+```@example 5
+losses(m0[7])*1e6
+```
+
+```@example 5
+using Plots
+plot(m0[1].r,-real.(m0[1].E),xlabel="r (µm)",ylabel="real(E)",label="LP01")
+plot!(m0[7].r,-real.(m0[7].E),label="LP02")
+```
+
+We can also compute the effective index of the LP11 mode:
+```@example 5
+m1=FD(1.6,1,10,f,1000,15,field=true,rPML=12)
+pos=argmin(losses.(m1)*1E6);
+m1[pos].neff
+```
+
+To compute the leaky vector modes that correspond to the LP11 mode, we can add a PML for the FEM solver:
+```@example 5
+using Gridap
+using GridapGmsh
+model = GmshDiscreteModel("../../models/Step_index_fiber_pml.msh");
+permittivity=x->f(hypot(x[1],x[2]))^2;
+epsilon=add_cylindrical_PML(permittivity,12,3,10);
+mu=add_cylindrical_PML(x->1.0,12,3,10);
+m=FEM(1.6,4,epsilon,mu,model,real(m1[pos].neff),field=true,order=2,solver=:MUMPS)
+```
+
+The field can be plotted using GridapMakie or saved (using the function 'writevtk') to a file that can be opened with ParaView.
+```@example 5
+using GridapMakie
+using GLMakie
+fig,ax,plot_obj=GLMakie.plot(m[end].Ω,real(m[1].Ex),axis=(aspect=DataAspect(),),colormap=:jet)
+Colorbar(fig[1,2], plot_obj);
+save("FEM_PML_Ex.png",fig); nothing #hide
+```
+![Real(Ex) for the first mode](FEM_PML_Ex.png)
+
 ## FEM: Photonic Crystal Fiber
-This example is more complex since, in a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begins at 8 µm from the fiber center and its thickness is 2 µm. 
+In a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begins at 8 µm from the fiber center and its thickness is 2 µm. 
+
 ![PCF mesh](./assets/PCF.png)
+
 First, the mesh is loaded:
 ```@example 4
 using OpticalFibers
