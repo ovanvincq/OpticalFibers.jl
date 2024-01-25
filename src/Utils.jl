@@ -13,6 +13,7 @@ export ring
 export tensor3
 export inverse
 export add_cylindrical_PML
+export add_rectangular_PML
 export approx_nFSM_PCF
 export approx_neff_PCF
 
@@ -403,6 +404,24 @@ function add_cylindrical_PML(epsmu::Function,r_pml::Real,d_pml::Real,alpha::Real
         return ComplexF64(0.0)
     end
     return tensor3(pml_xx,pml_xy,zf,pml_xy,pml_yy,zf,zf,zf,pml_zz);
+end
+
+"""
+    add_rectangular_PML(epsmu::Function,x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alpha::Real)
+
+Function that returns a tensor of permittivity/permeability with a rectangular PML
+
+- epsmu: Function of the tuple (x,y) that describes the permittivity/permeability profile of the fiber
+- x_pml: distance between the fiber center and the PML beginning in the x direction
+- dx_pml: PML thickness in the x direction
+- y_pml: distance between the fiber center and the PML beginning in the y direction
+- dy_pml: PML thickness in the y direction
+- alpha: attenuation factor of the PML
+"""
+function add_rectangular_PML(epsmu::Function,x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alpha::Real)
+    Sx=x->1.0-im*alpha*(max(abs(x[1])-x_pml,0))^2/(dx_pml)^2;
+    Sy=x->1.0-im*alpha*(max(abs(x[2])-y_pml,0))^2/(dy_pml)^2;
+    return tensor3(x->epsmu(x)*Sy(x)/Sx(x),x->epsmu(x)*Sx(x)/Sy(x),x->epsmu(x)*Sx(x)*Sy(x));
 end
 
 """
