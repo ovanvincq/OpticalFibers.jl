@@ -218,7 +218,7 @@ mu=add_cylindrical_PML(x->1.0,12,3,10);
 m=FEM(1.6,4,epsilon,mu,model,real(m1[pos].neff),field=true,order=2,solver=:MUMPS)
 ```
 
-The field can be plotted using GridapMakie or saved (using the function 'writevtk') to a file that can be opened with ParaView.
+The field can be plotted using GridapMakie:
 ```@example 5
 using GridapMakie
 using GLMakie
@@ -227,6 +227,30 @@ Colorbar(fig[1,2], plot_obj);
 save("FEM_PML_Ex.png",fig); nothing #hide
 ```
 ![Real(Ex) for the first mode](FEM_PML_Ex.png)
+
+## Elliptical core fiber with a low index trench
+In this example, the fiber is similar to the previous one but the core and the trench are elliptic:
+- core with a radius of 4 µm in the x direction and 2 µm in the y direction and a refractive index of 1.46
+- a trench with a refractive index of 1.41 and located between the core and an ellipse with radii 8 and 4 µm in x and y direction respectively
+- a cladding with a refractive index of 1.45
+
+![Elliptic Fiber RIP](./assets/Elliptic_profile.png)
+
+A rectangular PML is added for $12<\vert x \vert < 15$ µm and $8<\vert x \vert < 11$ µm to compute the leaky modes.
+
+The first mode is saved in a file that can be opened with ParaView.
+
+```@example 6
+using OpticalFibers
+using OpticalFibers.ModeSolvers
+f=x->1.46-0.05*(x[1]^2/16+x[2]^2/4>=1)+0.04*(x[1]^2/64+x[2]^2/16>1);
+epsilon=add_rectangular_PML(x->f(x)^2,12,3,8,3,10);
+mu=add_rectangular_PML(x->1,12,3,8,3,10);
+m=FEM(1.6,4,epsilon,mu,model,1.44,field=true,order=2,solver=:MUMPS);
+writevtk("mode1.vtu",m[1]); nothing #hide
+```
+
+![Elliptic Fiber Ex](./assets/Elliptic_Ex.png)
 
 ## FEM: Photonic Crystal Fiber
 In a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begins at 8 µm from the fiber center and its thickness is 2 µm. 
