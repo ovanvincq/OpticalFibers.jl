@@ -12,24 +12,15 @@ This solver only returns guided modes: the effective index of the mode is real a
     multi_step_fiber_modes
 ```
 
-## Finite difference mode solvers
-In this package, the FD solvers only return guided modes. The method used in the vectorial case is described in the paper of Zhu [Zhu2002](@cite).
-
-The computation of the effective index amounts to an eigenvalue problem. Three solutions are available to solve this eigenvalue problem: the use of the package `Arpack.jl` and the use of the package `ArnoldiMethod.jl` combined with `LinearAlgebra.jl` (LU decomposition) or `MUMPS.jl`.
-
-For the moment, it is only possible to use a PML in the 1D scalar case.
-
-```@docs
-    FD
-```
-
 ## Finite element mode solvers
-The FEM solvers are based on `Gridap.jl` and can compute modes of isotropic and anisotropic fibers (useful when using a PML).
+The FEM solvers are based on `Gridap.jl` and can compute modes of isotropic (functions `FEM1D` and `FEM2D`) and anisotropic fibers (function `FEM2D_general`).
+If a PML is not used, the functions `FEM1D` and `FEM2D` compute guided modes only. To compute the leaky modes, the user must add a PML by setting the value of dPML in these functions. 
 
-The computation of the effective index amounts to an eigenvalue problem. Two solutions are available to solve this eigenvalue problem: the use of the package `ArnoldiMethod.jl` combined with `LinearAlgebra.jl` (LU decomposition) or with `MUMPS.jl`.
-
-In the case of anisotropic fibers, the dimension of the matrix is twice as large as in the case of isotropic fibers.
+The computation of the effective index amounts to an eigenvalue problem which is solved by using the package `ArnoldiMethod.jl` combined with `LinearAlgebra.jl` (LU decomposition) or `MUMPS.jl`.
+Note that in the case of anisotropic fibers, the dimension of the matrix is twice as large as in the case of isotropic fibers.
 
 ```@docs
-    FEM
+    FEM1D
+    FEM2D
+    FEM2D_general
 ```

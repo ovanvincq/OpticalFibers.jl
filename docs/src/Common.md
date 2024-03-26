@@ -13,15 +13,21 @@ CurrentModule = OpticalFibers
     approx_nFSM_PCF
     approx_neff_PCF
     add_cylindrical_PML
+    add_rectangular_PML
+    add_twist_PML
+    integrate1D
+    integrate2D
 ```
 
 ## Tensor
 ```@docs
+    tensorComponent
+```
+
+```@docs
     tensor3
-    tensor3(::Union{Function,Number},::Union{Function,Number},::Union{Function,Number},::Union{Function,Number},::Union{Function,Number},::Union{Function,Number},::Union{Function,Number},::Union{Function,Number},::Union{Function,Number})
-    tensor3(::Union{Function,Number},::Union{Function,Number},::Union{Function,Number})
-    tensor3(::Union{Function,Number})
     inverse
+    det
 ```
 
 

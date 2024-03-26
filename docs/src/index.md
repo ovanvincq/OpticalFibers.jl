@@ -1,12 +1,13 @@
 # OpticalFibers.jl
 
-OpticalFibers.jl is a package that allows to compute modes of optical fibers. Different methods are implemented to find scalar or vector modes:
+[![Stable](https://img.shields.io/badge/docs-dev-blue.svg)](https://ovanvincq.github.io/OpticalFibers.jl)
+
+OpticalFibers is a package that allows to compute modes of optical fibers. Different methods are implemented to find scalar or vector modes:
 - A semi-analytical solver (based on Bessel functions) for multi-step index fibers.
-- Finite difference method for graded-index isotropic fibers.
 - Finite element method (using `Gridap.jl`) for any kind of isotropic or anisotropic fiber (useful to find leaky modes using a PML for example)
 
 ## Installation
-OpticalFibers.jl requires at least julia 1.9 and can be installed with:
+OpticalFibers requires at least julia 1.9 and can be installed with:
 
 ```julia
 using Pkg
@@ -19,39 +20,31 @@ Computation of the scalar fundamental mode (l=0) of a step index fiber with a co
 julia> using OpticalFibers
 julia> using OpticalFibers.ModeSolvers
 julia> ms=multi_step_fiber_modes(1,0,2,[1.47,1.45])
-1-element Vector{ScalarMode1D}:
- ["LP 0,1",1.463179347605715,1.0,0]
+1-element Vector{Mode}:
+ [LP 0,1,1.463179347605715,1,Nothing]
 ```
 Computation of the fundamental vector mode (l=1) of the same fiber:
 ```julia
 julia> mv=multi_step_fiber_modes(1,1,2,[1.47,1.45],type=:Vector)
-1-element Vector{VectorMode}:
- ["HE 1,1",1.4631371608572663,1.0]
+1-element Vector{Mode}:
+ [HE 1,1,1.4631371608572663,1,Nothing]
 ```
 
-Computation of the scalar modes of a parabolic-index fiber with a core-radius of 4 µm, a refractive index of 1.48 for core center and 1.45 for cladding at a wavelength of 1 µm by using the finite difference method with 1000 nodes between r=0 and r=20 µm:
+Computation of the scalar modes of a parabolic-index fiber with a core-radius of 4 µm, a refractive index of 1.48 for core center and 1.45 for cladding at a wavelength of 1 µm by using the finite element method with 1000 nodes between r=0 and r=20 µm:
 ```julia
 julia> using OpticalFibers
 julia> using OpticalFibers.ModeSolvers
-julia> m=FD.(1,[0,1,2],5,r->1.45+0.03*(1-r^2/16)*(r<=4),1000,20,field=true)
-3-element Vector{Vector{ScalarMode1D}}:
- [["LP 0,1",1.471980845215266,1.0,0,[0.0,20.0],[1.1164104145818255e-15,0.12423741722742176]], ["LP 0,2",1.456151117128024,1.0,0,[0.0,20.0],[-0.06350256918319086,0.14163056081827127]]]
- [["LP 1,1",1.4639612833431581,1.0,1,[0.0,20.0],[-0.10628423740430118,0.0]]]
- [["LP 2,1",1.4560227630144946,1.0,2,[0.0,20.0],[-0.10409704787976527,0.0]]]
-
-julia> m[1][1]
-Name = LP 0,1
-neff = 1.471980845215266
-lambda = 1.0
-nu = 0
-r ∈ [0.0,20.0]
-E ∈ [-0.12423741722742185,-1.114629187729248e-15]
+julia> using Gridap
+julia> m=FEM1D(1,0,x->(1.45+0.03*(1-x[1]^2/16)*(x[1]<=4))^2,CartesianDiscreteModel((0,20),1000),field=true,neigs=5)
+2-element Vector{Mode{ScalarFieldFEM1D}}:
+ [Mode LP n°1,1.471980656971672,1,ScalarFieldFEM1D]
+ [Mode LP n°2,1.4561502566053002,1,ScalarFieldFEM1D]
 
 julia> using Plots
-julia> plot(m[1][1].r,abs2(m[1][1].E))
+julia> r=0:0.01:10
+julia> plot(r,abs.(computeField(m[1],r)),label="LP01",xlabel="r (µm)",ylabel="|E|²")
 ```
-![Fundamental mode example](./assets/fig1.png)
+![Fundamental mode example](docs/src/assets/fig1.png)
 
 ## Credits
 OpticalFibers.jl is maintained by Olivier Vanvincq ([university of Lille](https://www.univ-lille.fr/), [PhLAM laboratory](https://phlam.univ-lille.fr/)).
-
