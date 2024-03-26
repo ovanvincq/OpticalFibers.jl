@@ -41,3 +41,4 @@ SparseArrays = "1"
 StaticArrays = "1"
 Trapz = "2"
 julia = "1.9"
+
