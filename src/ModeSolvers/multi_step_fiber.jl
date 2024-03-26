@@ -29,11 +29,11 @@ function phi1(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vect
     U=sqrt(abs((neff^2)-(index^2)))*k0*radius;
     if (neff<index)
         return besselj.(nu,U.*r./radius)./besselj(nu,U);
-    end
-    if (neff==index)
+    elseif (neff==index)
         return (r./radius).^nu;
+    else
+        return besseli.(nu,U.*r./radius)./besseli(nu,U);
     end
-    return besseli.(nu,U.*r./radius)./besseli(nu,U);
 end
 
 function phi1_prime(index::Float64,radius::Float64,neff::Vector{Float64},r::Float64,k0::Float64,nu::Int64)
@@ -73,11 +73,11 @@ function phi2(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vect
     U=sqrt(abs((neff^2)-(index^2)))*k0*radius;
     if (neff<index)
         return bessely.(nu,U.*r./radius)./bessely(nu,U);
-    end
-    if (neff==index)
+    elseif (neff==index)
         return (radius./r).^nu;
+    else
+        return besselk.(nu,U.*r./radius)./besselk(nu,U);
     end
-    return besselk.(nu,U.*r./radius)./besselk(nu,U);
 end
 
 function phi2_prime(index::Float64,radius::Float64,neff::Vector{Float64},r::Float64,k0::Float64,nu::Int64)
@@ -580,7 +580,7 @@ function Er2(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vecto
     return result;
 end
 
-function Er3(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vector{Float64}},k0::Float64,nu::Int64)
+function Er3(index::Float64,radius::Float64,neff::Float64,r::Vector{Float64},k0::Float64,nu::Int64)
     facteur=sqrt(mu0/eps0)/(k0^2*index^2-k0^2*neff^2)*k0;
     U=sqrt(abs((neff^2)-(index^2)))*k0*radius;
     r1=r[r.!=0];
@@ -603,12 +603,32 @@ function Er3(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vecto
     return result;
 end
 
+function Er3(index::Float64,radius::Float64,neff::Float64,r::Float64,k0::Float64,nu::Int64)
+    facteur=sqrt(mu0/eps0)/(k0^2*index^2-k0^2*neff^2)*k0;
+    U=sqrt(abs((neff^2)-(index^2)))*k0*radius;
+    if (r==0.0)
+        if (nu==1)
+            if neff<index
+                return -facteur*U/2.0/radius/besselj(1,U);
+            elseif neff==index
+                return -facteur/radius
+            else
+                return -facteur*U/2.0/radius/besseli(1,U);
+            end
+        else
+            return 0.0
+        end
+    else
+        return -nu*facteur/r*EHz1(index,radius,neff,r,k0,nu);
+    end
+end
+
 function Er4(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vector{Float64}},k0::Float64,nu::Int64)
     facteur=sqrt(mu0/eps0)/(k0^2*index^2-k0^2*neff^2)*k0;
     return -facteur*nu./r.*EHz2(index,radius,neff,r,k0,nu);
 end
 
-function Hr1(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vector{Float64}},k0::Float64,nu::Int64)
+function Hr1(index::Float64,radius::Float64,neff::Float64,r::Vector{Float64},k0::Float64,nu::Int64)
     facteur=sqrt(eps0/mu0)/(k0^2*index^2-k0^2*neff^2)*k0*index^2;
     U=sqrt(abs((neff^2)-(index^2)))*k0*radius;
     r1=r[r.!=0];
@@ -629,6 +649,26 @@ function Hr1(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vecto
     result[r.!=0]=result1;
     result[r.==0]=result0;
     return result;
+end
+
+function Hr1(index::Float64,radius::Float64,neff::Float64,r::Float64,k0::Float64,nu::Int64)
+    facteur=sqrt(eps0/mu0)/(k0^2*index^2-k0^2*neff^2)*k0*index^2;
+    U=sqrt(abs((neff^2)-(index^2)))*k0*radius;
+    if (r==0.0)
+        if (nu==1)
+            if neff<index
+                return -facteur*U/2.0/radius/besselj(1,U);
+            elseif neff==index
+                return -facteur/radius
+            else
+                return -facteur*U/2.0/radius/besseli(1,U);
+            end
+        else
+            return 0.0;
+        end
+    else
+        return -nu*facteur/r*EHz1(index,radius,neff,r,k0,nu);
+    end
 end
 
 function Hr2(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vector{Float64}},k0::Float64,nu::Int64)
@@ -670,18 +710,15 @@ function Hr4(index::Float64,radius::Float64,neff::Float64,r::Union{Float64,Vecto
     return result;
 end
 
-function scalarField_test(r::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A::Vector{Float64},B::Vector{Float64})
+function scalarField_scalar(r::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A::Vector{Float64},B::Vector{Float64})
     nb_couches=length(index);
-    pos=1;
-    @inbounds for i=1:length(radius)
-        pos=pos+(r>radius[i]);
-    end
+    pos=sum(r.>radius)+1
     if (pos==1)
         E=A[1]*phi1(index[1],radius[1],neff,r,k0,nu);
     elseif (pos==nb_couches)
-        E=B[nb_couches]*phi2(index[nb_couches],radius[nb_couches-1],neff,r,k0,nu);
+        E=B[nb_couches]*phi2(index[end],radius[end],neff,r,k0,nu);
     else
-        E=A[pos].*phi1(index[pos],radius[pos],neff,r,k0,nu)+B[pos].*phi2(index[pos],radius[pos],neff,r,k0,nu);
+        E=A[pos]*phi1(index[pos],radius[pos],neff,r,k0,nu)+B[pos]*phi2(index[pos],radius[pos],neff,r,k0,nu);
     end
     return E;
 end
@@ -746,6 +783,27 @@ function Er(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{
     return cossin.(phi,nu,sc).*Er;
 end
 
+function Er_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    nb_couches=length(index);
+    pos=sum(r.>radius)+1
+    if (pos==1)
+        E1=Er1(index[1],radius[1],neff,r,k0,nu);
+        E3=Er3(index[1],radius[1],neff,r,k0,nu);
+        Er=A1[1]*E1+A3[1]*E3;
+    elseif (pos==nb_couches)
+        E2=Er2(index[end],radius[end],neff,r,k0,nu);
+        E4=Er4(index[end],radius[end],neff,r,k0,nu);
+        Er=A2[end]*E2+A4[end]*E4;
+    else
+        E1=Er1(index[pos],radius[pos],neff,r,k0,nu);
+        E2=Er2(index[pos],radius[pos],neff,r,k0,nu);
+        E3=Er3(index[pos],radius[pos],neff,r,k0,nu);
+        E4=Er4(index[pos],radius[pos],neff,r,k0,nu);
+        Er=A1[pos]*E1+A2[pos]*E2+A3[pos]*E3+A4[pos]*E4;
+    end
+    return cossin(phi,nu,sc)*Er;
+end
+
 function Hr(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{Float64,2},Vector{Float64},Float64},nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
     nb_couches=length(index);
     pos=fill(1,size(r));
@@ -770,6 +828,27 @@ function Hr(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{
         #Er[pos.==i].=A1[i]*Er1(index[i],radius[i],neff,r[pos.==i],k0,nu)+A2[i]*Er2(index[i],radius[i],neff,r[pos.==i],k0,nu)+A3[i]*Er3(index[i],radius[i],neff,r[pos.==i],k0,nu)+A4[i]*Er4(index[i],radius[i],neff,r[pos.==i],k0,nu);
     end
     return cossin2.(phi,nu,sc).*Hr;
+end
+
+function Hr_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    nb_couches=length(index);
+    pos=sum(r.>radius)+1
+    if (pos==1)
+        H1=Hr1(index[1],radius[1],neff,r,k0,nu);
+        H3=Hr3(index[1],radius[1],neff,r,k0,nu);
+        Hr=A1[1]*H1+A3[1]*H3;
+    elseif (pos==nb_couches)
+        H2=Hr2(index[end],radius[end],neff,r,k0,nu);
+        H4=Hr4(index[end],radius[end],neff,r,k0,nu);
+        Hr=A2[end]*H2+A4[end]*H4;
+    else
+        H1=Hr1(index[pos],radius[pos],neff,r,k0,nu);
+        H2=Hr2(index[pos],radius[pos],neff,r,k0,nu);
+        H3=Hr3(index[pos],radius[pos],neff,r,k0,nu);
+        H4=Hr4(index[pos],radius[pos],neff,r,k0,nu);
+        Hr=A1[pos]*H1+A2[pos]*H2+A3[pos]*H3+A4[pos]*H4;
+    end
+    return cossin2(phi,nu,sc)*Hr;
 end
 
 function Ephi(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{Float64,2},Vector{Float64},Float64},nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
@@ -798,6 +877,27 @@ function Ephi(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Arra
     return cossin2.(phi,nu,sc).*Ephi;
 end
 
+function Ephi_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    nb_couches=length(index);
+    pos=sum(r.>radius)+1
+    if (pos==1)
+        E1=Ephi1(index[1],radius[1],neff,r,k0,nu);
+        E3=Ephi3(index[1],radius[1],neff,r,k0,nu);
+        Ephi=A1[1]*E1+A3[1]*E3;
+    elseif (pos==nb_couches)
+        E2=Ephi2(index[end],radius[end],neff,r,k0,nu);
+        E4=Ephi4(index[end],radius[end],neff,r,k0,nu);
+        Ephi=A2[end]*E2+A4[end]*E4;
+    else
+        E1=Ephi1(index[pos],radius[pos],neff,r,k0,nu);
+        E2=Ephi2(index[pos],radius[pos],neff,r,k0,nu);
+        E3=Ephi3(index[pos],radius[pos],neff,r,k0,nu);
+        E4=Ephi4(index[pos],radius[pos],neff,r,k0,nu);
+        Ephi=A1[pos]*E1+A2[pos]*E2+A3[pos]*E3+A4[pos]*E4;
+    end
+    return cossin2(phi,nu,sc)*Ephi;
+end
+
 function Hphi(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{Float64,2},Vector{Float64},Float64},nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
     nb_couches=length(index);
     pos=fill(1,size(r));
@@ -824,6 +924,27 @@ function Hphi(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Arra
     return cossin.(phi,nu,sc).*Hphi;
 end
 
+function Hphi_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    nb_couches=length(index);
+    pos=sum(r.>radius)+1
+    if (pos==1)
+        H1=Hphi1(index[1],radius[1],neff,r,k0,nu);
+        H3=Hphi3(index[1],radius[1],neff,r,k0,nu);
+        Hphi=A1[1]*H1+A3[1]*H3;
+    elseif (pos==nb_couches)
+        H2=Hphi2(index[end],radius[end],neff,r,k0,nu);
+        H4=Hphi4(index[end],radius[end],neff,r,k0,nu);
+        Hphi=A2[end]*H2+A4[end]*H4;
+    else
+        H1=Hphi1(index[pos],radius[pos],neff,r,k0,nu);
+        H2=Hphi2(index[pos],radius[pos],neff,r,k0,nu);
+        H3=Hphi3(index[pos],radius[pos],neff,r,k0,nu);
+        H4=Hphi4(index[pos],radius[pos],neff,r,k0,nu);
+        Hphi=A1[pos]*H1+A2[pos]*H2+A3[pos]*H3+A4[pos]*H4;
+    end
+    return cossin(phi,nu,sc)*Hphi;
+end
+
 function EzHz(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{Float64,2},Vector{Float64},Float64},nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
     nb_couches=length(index);
     pos=fill(1,size(r));
@@ -847,16 +968,74 @@ function EzHz(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Arra
     return cossin.(phi,nu,sc).*Ez,cossin2.(phi,nu,sc).*Hz;
 end
 
+function Ez_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    nb_couches=length(index);
+    pos=sum(r.>radius)+1
+    if (pos==1)
+        E1=EHz1(index[1],radius[1],neff,r,k0,nu);
+        Ez=A1[1]*E1;
+    elseif (pos==nb_couches)
+        E2=EHz2(index[end],radius[end],neff,r,k0,nu);
+        Ez=A2[end]*E2;
+    else
+        E1=EHz1(index[pos],radius[pos],neff,r,k0,nu);
+        E2=EHz2(index[pos],radius[pos],neff,r,k0,nu);
+        Ez=A1[pos]*E1+A2[pos]*E2;
+    end
+    return cossin(phi,nu,sc)*Ez;
+end
+
+function Hz_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    nb_couches=length(index);
+    pos=sum(r.>radius)+1
+    if (pos==1)
+        H1=EHz1(index[1],radius[1],neff,r,k0,nu);
+        Hz=A3[1]*H1;
+    elseif (pos==nb_couches)
+        H2=EHz2(index[end],radius[end],neff,r,k0,nu);
+        Hz=A4[end]*H2;
+    else
+        H1=EHz1(index[pos],radius[pos],neff,r,k0,nu);
+        H2=EHz2(index[pos],radius[pos],neff,r,k0,nu);
+        Hz=A3[pos]*H1+A4[pos]*H2;
+    end
+    return cossin2(phi,nu,sc)*Hz;
+end
+
 function ExEy(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{Float64,2},Vector{Float64},Float64},nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
     Er_task=Threads.@spawn Er(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc);
     Ephi_task=Threads.@spawn Ephi(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc)
     return cos.(phi).*fetch(Er_task)-sin.(phi).*fetch(Ephi_task),sin.(phi).*fetch(Er_task)+cos.(phi).*fetch(Ephi_task);
 end
 
+function Ex_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    Er=Er_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc);
+    Ephi=Ephi_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc)
+    return cos(phi)*Er-sin(phi)*Ephi
+end
+
+function Ey_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    Er=Er_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc);
+    Ephi=Ephi_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc)
+    return sin(phi)*Er+cos(phi)*Ephi
+end
+
 function HxHy(r::Union{Array{Float64,2},Vector{Float64},Float64},phi::Union{Array{Float64,2},Vector{Float64},Float64},nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
     Hr_task=Threads.@spawn Hr(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc);
     Hphi_task=Threads.@spawn Hphi(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc)
     return cos.(phi).*fetch(Hr_task)-sin.(phi).*fetch(Hphi_task),sin.(phi).*fetch(Hr_task)+cos.(phi).*fetch(Hphi_task);
+end
+
+function Hx_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    Hr=Hr_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc);
+    Hphi=Hphi_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc)
+    return cos(phi)*Hr-sin(phi)*Hphi
+end
+
+function Hy_scalar(r::Float64,phi::Float64,nu::Int64,neff::Float64,k0::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64},A1::Vector{Float64},A2::Vector{Float64},A3::Vector{Float64},A4::Vector{Float64},sc::Bool)
+    Hr=Hr_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc);
+    Hphi=Hphi_scalar(r,phi,nu,neff,k0,radius,index,A1,A2,A3,A4,sc)
+    return sin(phi)*Hr+cos(phi)*Hphi
 end
 
 function findAB_scalar(k0::Float64,nu::Int64,neff::Float64,radius::Union{Vector{Float64},Float64},index::Vector{Float64})
@@ -1233,23 +1412,21 @@ function findroot(k0::Float64,nu::Int64,neff::Vector{Float64},radius::Union{Vect
     end
 end
 
-#lambda : wavelength ; nu : azimuthal number ; radius : raddii vector ; index : refractive indices vector : maxPosition : maximum position vector for field computation ; numberofPoints : number of points between 0 and maxposition ; precision : precision on effective index ; type : Scalar/Vector ; firstDivision : number of divsion between min(n) and max(n) for the first step
 """
     multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};maxPosition::Real=0,numberofPoints::Integer=100,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
 
-Returns a vector of `ScalarMode1D` if type=:Scalar or a vector of `VectorMode` if type=:Vector. If maxPosition=0, the modes do not include the electromagnetic field.
+Returns a vector of `Mode{ScalarFieldFunction1D}` if type=:Scalar or a vector of `Mode{VectorFieldFunction2D}` if type=:Vector.
 
 - lambda: wavelength
 - nu: azimuthal number
 - radius: outer radius of each layer (the cladding is inifinite and has no radius)
 - index: refractive index of each layer (the cladding is included so that length(index) must be equal to length(radius)+1)
-- maxPosition: maximum value of the radial coordinate r for scalar modes or cartesian coordinates x/y for vector modes. If maxPosition=0, the field is not computed.
-- numberofPoints: number of points between 0 and maxPosition
+- field: boolean that indicates if fields must be saved
 - precision: precision required on the effective index 
 - type: must be :Scalar or :Vector
 - firstDivision: in the case of a very multimode fiber, you can increase this number if some modes are missing. If firstDivision=0, the value of firstDivision is approximated by the solver.
 """
-function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};maxPosition::Real=0,numberofPoints::Integer=100,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
     if (length(index) != (length(radius)+1))
         throw(DimensionMismatch("dim(radii) must be equal to dim(n)-1"));
     end
@@ -1274,21 +1451,6 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
     if (type!=:Scalar) & (type!=:Vector)
         throw(DomainError(firstDivision, "type must be :Scalar or :Vector"));
     end
-    if (maxPosition<0)
-        throw(DomainError(maxPosition, "The maximum position must be positive"));
-    end
-    if (numberofPoints<2)
-        throw(DomainError(numberofPoints, "The number of points must be greater than 2"));
-    end
-    if (maxPosition>0)
-        if (type==:Scalar)
-            position=collect(LinRange(0,maxPosition,numberofPoints));
-        else
-            position=collect(LinRange(-maxPosition,maxPosition,2*numberofPoints-1));
-        end
-    else
-        position=Vector{Float64}();
-    end
     radius=convert.(Float64,radius);
     index=convert.(Float64,index);
     k0=2*pi/lambda;
@@ -1296,11 +1458,7 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
     n_min=index[end];
     V=k0*radius[end]*sqrt(maximum(index)^2-index[end]^2);
 
-    if (type==:Scalar)
-        modes=Vector{ScalarMode1D}(undef,0);
-    else
-        modes=Vector{VectorMode}(undef,0);
-    end
+    modes=Vector{Mode}(undef,0);
 
     if (type==:Scalar)
         t=1;
@@ -1354,7 +1512,7 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
             end
         end
 
-        if (length(position)==0)
+        if (!field)
             Nm=length(neff_min);
             resize!(modes,pos0+Nm);
             for n=1:length(neff_min)
@@ -1375,71 +1533,58 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                         name=string("EH ",string(nu),",",string(nb2));
                     end
                 end
-                if (type==:Scalar)
-                    modes[pos0+n]=ScalarMode1D(name,neff_result,lambda,nu,[],[]);
-                else
-                    empty_array=Array{Float64}(undef,0,2);
-                    modes[pos0+n]=VectorMode(name,neff_result,lambda,[],[],empty_array,empty_array,empty_array,empty_array,empty_array,empty_array);
-                end
+                modes[pos0+n]=Mode(name,neff_result,lambda);
             end
         else
             if (type==:Scalar)
                 Nm=length(neff_min);
                 resize!(modes,Nm);
-                Threads.@threads for n=1:length(neff_min)
+                for n=1:length(neff_min)
                     neff_result=(neff_min[n]+neff_max[n])/2.0;
                     name=string("LP ",string(nu),",",string(length(neff_min)-n+1));
                     A,B=findAB_scalar(k0,nu,neff_result,radius,index);
-                    E=scalarField(position,nu,neff_result,k0,radius,index,A,B);
-                    modes[n]=ScalarMode1D(name,neff_result,lambda,nu,position,E);
+                    E=x->scalarField_scalar(Float64(x[1]),nu,neff_result,k0,radius,index,A,B);
+                    modes[n]=Mode(name,neff_result,lambda,ScalarFieldFunction1D(nu,E));
                 end
             else
                 #Vector case
-                phi=atan.(position',position);
-                r=hypot.(position,position');
                 if (t[it]==2)
                     #TM
                     Nm=length(neff_min);
                     resize!(modes,Nm);
-                    Threads.@threads for n=1:length(neff_min)
+                    for n=1:length(neff_min)
                         neff_result=(neff_min[n]+neff_max[n])/2.0;
                         A1,A2,A3,A4=findA_TM(k0,nu,neff_result,radius,index);
-                        #=TM_Ex,TM_Ey=ExEy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        TM_Ez,TM_Hz=EzHz(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        TM_Hx,TM_Hy=HxHy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);=#
-                        TM_Ex_Ey_task=Threads.@spawn ExEy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        TM_Ez_Hz_task=Threads.@spawn EzHz(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        TM_Hx_Hy_task=Threads.@spawn HxHy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        TM_Ex,TM_Ey=fetch(TM_Ex_Ey_task);
-                        TM_Ez,TM_Hz=fetch(TM_Ez_Hz_task);
-                        TM_Hx,TM_Hy=fetch(TM_Hx_Hy_task);
+                        TM_Ex=x->Ex_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        TM_Ey=x->Ey_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        TM_Ez=x->-im*Ez_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        TM_Hz=x->-im*Hz_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        TM_Hx=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        TM_Hy=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
                         name=string("TM 0,",string(length(neff_min)-n+1));
-                        modes[n]=VectorMode(name,neff_result,lambda,position,position,TM_Ex,TM_Ey,-TM_Ez,TM_Hx,TM_Hy,-TM_Hz);
+                        modes[n]=Mode(name,neff_result,lambda,VectorFieldFunction2D(TM_Ex,TM_Ey,TM_Ez,TM_Hx,TM_Hy,TM_Hz));
                     end
                 elseif t[it]==3
                     #TE
                     Nm=length(neff_min);
                     resize!(modes,pos0+Nm);
-                    Threads.@threads for n=1:length(neff_min)
+                    for n=1:length(neff_min)
                         neff_result=(neff_min[n]+neff_max[n])/2.0;
                         A1,A2,A3,A4=findA_TE(k0,nu,neff_result,radius,index);
-                        #=TE_Ex,TE_Ey=ExEy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        TE_Ez,TE_Hz=EzHz(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        TE_Hx,TE_Hy=HxHy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);=#
-                        TE_Ex_Ey_task=Threads.@spawn ExEy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        TE_Ez_Hz_task=Threads.@spawn EzHz(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        TE_Hx_Hy_task=Threads.@spawn HxHy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        TE_Ex,TE_Ey=fetch(TE_Ex_Ey_task);
-                        TE_Ez,TE_Hz=fetch(TE_Ez_Hz_task);
-                        TE_Hx,TE_Hy=fetch(TE_Hx_Hy_task);
+                        TM_Ex=x->Ex_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        TM_Ey=x->Ey_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        TM_Ez=x->-im*Ez_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        TM_Hz=x->-im*Hz_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        TM_Hx=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        TM_Hy=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
                         name=string("TE 0,",string(length(neff_min)-n+1));
-                        modes[pos0+n]=VectorMode(name,neff_result,lambda,position,position,TE_Ex,TE_Ey,-TE_Ez,TE_Hx,TE_Hy,-TE_Hz);
+                        modes[pos0+n]=Mode(name,neff_result,lambda,VectorFieldFunction2D(TM_Ex,TM_Ey,TM_Ez,TM_Hx,TM_Hy,TM_Hz));
                     end
                 else
                     #HE-EH
                     Nm=2*length(neff_min);
                     resize!(modes,Nm);
-                    Threads.@threads for n=1:length(neff_min)
+                    for n in axes(neff_min,1)# =1:length(neff_min)
                         nb=length(neff_min)-n+1;
                         neff_result=(neff_min[n]+neff_max[n])/2.0;
                         A1,A2,A3,A4=findA_HE_EH(k0,nu,neff_result,radius,index);
@@ -1452,20 +1597,20 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                             name1=string("EH ",string(nu),",",string(nb2),'a');
                             name2=string("EH ",string(nu),",",string(nb2),'b');
                         end
-                        HEEH_Ex_Ey_task=Threads.@spawn ExEy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        HEEH_Ez_Hz_task=Threads.@spawn EzHz(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        HEEH_Hx_Hy_task=Threads.@spawn HxHy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
-                        HEEH_Ex2_Ey2_task=Threads.@spawn ExEy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        HEEH_Ez2_Hz2_task=Threads.@spawn EzHz(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        HEEH_Hx2_Hy2_task=Threads.@spawn HxHy(r,phi,nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        HEEH_Ex,HEEH_Ey=fetch(HEEH_Ex_Ey_task);
-                        HEEH_Ez,HEEH_Hz=fetch(HEEH_Ez_Hz_task);
-                        HEEH_Hx,HEEH_Hy=fetch(HEEH_Hx_Hy_task);
-                        HEEH_Ex2,HEEH_Ey2=fetch(HEEH_Ex2_Ey2_task);
-                        HEEH_Ez2,HEEH_Hz2=fetch(HEEH_Ez2_Hz2_task);
-                        HEEH_Hx2,HEEH_Hy2=fetch(HEEH_Hx2_Hy2_task);
-                        modes[2*n-1]=VectorMode(name1,neff_result,lambda,position,position,HEEH_Ex,HEEH_Ey,-HEEH_Ez,HEEH_Hx,HEEH_Hy,-HEEH_Hz);
-                        modes[2*n]=VectorMode(name2,neff_result,lambda,position,position,HEEH_Ex2,HEEH_Ey2,-HEEH_Ez2,HEEH_Hx2,HEEH_Hy2,-HEEH_Hz2);
+                        HEEH_Ex=x->Ex_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        HEEH_Ey=x->Ey_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        HEEH_Ez=x->-im*Ez_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        HEEH_Hz=x->-im*Hz_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        HEEH_Hx=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        HEEH_Hy=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
+                        HEEH_Ex2=x->Ex_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        HEEH_Ey2=x->Ey_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        HEEH_Ez2=x->-im*Ez_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        HEEH_Hz2=x->-im*Hz_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        HEEH_Hx2=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        HEEH_Hy2=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
+                        modes[2*n-1]=Mode(name1,neff_result,lambda,VectorFieldFunction2D(HEEH_Ex,HEEH_Ey,HEEH_Ez,HEEH_Hx,HEEH_Hy,HEEH_Hz));
+                        modes[2*n]=Mode(name2,neff_result,lambda,VectorFieldFunction2D(HEEH_Ex2,HEEH_Ey2,HEEH_Ez2,HEEH_Hx2,HEEH_Hy2,HEEH_Hz2));
                     end
                 end
             end
