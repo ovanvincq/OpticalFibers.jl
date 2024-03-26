@@ -24,7 +24,7 @@ m11=m1[1]
 nothing; #hide
 ```
 
-Note that you can also use broadcasting to compute all modes with a single command. The function `Ref` allows to use the same vector of refractive index for all values of the azimuthal number.
+Note that you can also use broadcasting to compute all modes with a single command. The function `Ref` allows to use the same vector of refractive index for all values of the azimuthal number. 
 ```@example 1
 m=multi_step_fiber_modes.(1,[0,1],2,Ref([1.47,1.45]),field=true);
 m01=m[1][1];
