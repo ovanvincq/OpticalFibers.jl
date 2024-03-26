@@ -22,5 +22,5 @@ Note that in the case of anisotropic fibers, the dimension of the matrix is twic
 ```@docs
     FEM1D
     FEM2D
-    FEM2D_general
+    FEM2D_anisotropic
 ```
