@@ -1,7 +1,7 @@
 # see documentation at https://juliadocs.github.io/Documenter.jl/stable/
 push!(LOAD_PATH,"../src/")
 
-using Documenter, DocumenterCitations, Plots, OpticalFibers
+using Documenter, DocumenterCitations, OpticalFibers
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"); style=:numeric)
 
 ENV["GKSwstype"] = "100"
@@ -23,6 +23,6 @@ println("Finished makedocs")
 # deploydocs() in the Documenter manual for more information.
 deploydocs(
     repo = "https://github.com/ovanvincq/OpticalFibers.jl.git",
-    #repo = Remotes.GitHub("OVanvincq","OpticalFibers.jl"),
-    push_preview = true
+    push_preview = true,
+    devbranch = "main",
 )
