@@ -22,7 +22,7 @@ println("Finished makedocs")
 # Some setup is needed for documentation deployment, see “Hosting Documentation” and
 # deploydocs() in the Documenter manual for more information.
 deploydocs(
-    repo = "https://github.com/ovanvincq/OpticalFibers.jl.git",
+    repo = "github.com/ovanvincq/OpticalFibers.jl.git",
     push_preview = true,
     devbranch = "main",
 )
