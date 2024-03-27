@@ -4,6 +4,7 @@
 abstract type Field end
 
 Base.:transpose(f::Field) = f
+Broadcast.:broadcastable(f::Field)=Ref(f)
 
 """
     abstract type ScalarField1D <: Field end
@@ -304,6 +305,7 @@ struct Mode{T<:Union{Field,Nothing}}
 end
 
 Base.:transpose(m::Mode) = m
+Broadcast.:broadcastable(m::Mode)=Ref(m)
 
 function Base.show(io::IO, ::MIME"text/plain",m::Mode) 
     print(io,"Name = ",m.Name,"\nneff = ",m.neff,"\nlambda = ",m.lambda,"\nfield = ",typeof(m.field));
