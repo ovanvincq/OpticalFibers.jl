@@ -14,6 +14,7 @@ using Gridap.Fields
 using Gridap.ReferenceFEs
 using HCubature
 using NearestNeighbors
+using StaticArrays
 using Roots
 
 import OpticalFibers.PhysicalData: c,mu0,eps0,h,Z0
