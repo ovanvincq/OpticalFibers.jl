@@ -18,6 +18,7 @@ NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
 
 [compat]
@@ -35,6 +36,7 @@ NearestNeighbors = "0.4"
 ProgressMeter = "1"
 Roots = "2"
 SparseArrays = "1"
+StaticArrays = "1"
 Trapz = "2"
 julia = "1.9"
 
