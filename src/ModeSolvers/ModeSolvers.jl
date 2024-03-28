@@ -11,7 +11,6 @@ using Gridap.Geometry
 using Gridap.TensorValues
 using Gridap.CellData
 using Gridap.Fields
-using StaticArrays
 using Gridap.ReferenceFEs
 using HCubature
 using NearestNeighbors
