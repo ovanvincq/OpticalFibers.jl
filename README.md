@@ -1,6 +1,6 @@
 # OpticalFibers.jl
 
-[![Stable](https://img.shields.io/badge/docs-dev-blue.svg)](https://ovanvincq.github.io/OpticalFibers.jl) [![DOI](https://zenodo.org/badge/696327811.svg)](https://zenodo.org/badge/latestdoi/696327811)
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://ovanvincq.github.io/OpticalFibers.jl) [![DOI](https://zenodo.org/badge/696327811.svg)](https://zenodo.org/badge/latestdoi/696327811)
 
 OpticalFibers is a package that allows to compute modes of optical fibers. Different methods are implemented to find scalar or vector modes:
 - A semi-analytical solver (based on Bessel functions) for multi-step index fibers.
