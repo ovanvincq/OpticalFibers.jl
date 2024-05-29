@@ -83,18 +83,18 @@ mutable struct ScalarFieldFEM1D <: ScalarField1D
     E::Gridap.CellField
 end
 
-Base.:+(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = ((f1.nu==f2.nu) && (f1.r==f2.r)) ?  ScalarFieldFEM1D(f1.nu,dΩ,f1.E+f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
-Base.:-(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = ((f1.nu==f2.nu) && (f1.r==f2.r)) ?  ScalarFieldFEM1D(f1.nu,dΩ,f1.E-f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
-Base.:*(k::Number, f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,k*f.E);
-Base.:*(f::ScalarFieldFEM1D,k::Number) = ScalarFieldFEM1D(f.nu,dΩ,k*f.E);
-Base.:/(f::ScalarFieldFEM1D,k::Number) = ScalarFieldFEM1D(f.nu,dΩ,f.E/k);
-Base.:+(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,f.E);
-Base.:-(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,-f.E);
-Base.:real(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,real(f.E));
-Base.:imag(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,imag(f.E));
-Base.:conj(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,conj(f.E));
-Base.:abs(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,abs(f.E));
-Base.:abs2(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,dΩ,abs2(f.E));
+Base.:+(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = ((f1.nu==f2.nu) && (f1.r==f2.r)) ?  ScalarFieldFEM1D(f1.nu,f1.dΩ,f1.E+f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
+Base.:-(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = ((f1.nu==f2.nu) && (f1.r==f2.r)) ?  ScalarFieldFEM1D(f1.nu,f1.dΩ,f1.E-f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
+Base.:*(k::Number, f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,k*f.E);
+Base.:*(f::ScalarFieldFEM1D,k::Number) = ScalarFieldFEM1D(f.nu,f.dΩ,k*f.E);
+Base.:/(f::ScalarFieldFEM1D,k::Number) = ScalarFieldFEM1D(f.nu,f.dΩ,f.E/k);
+Base.:+(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,f.E);
+Base.:-(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,-f.E);
+Base.:real(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,real(f.E));
+Base.:imag(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,imag(f.E));
+Base.:conj(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,conj(f.E));
+Base.:abs(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,abs(f.E));
+Base.:abs2(f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,abs2(f.E));
 
 """
     mutable struct ScalarFieldFunction2D <: ScalarField2D
@@ -154,18 +154,19 @@ mutable struct ScalarFieldFEM2D <: ScalarField2D
     E::Gridap.CellField
 end
 
-Base.:+(f1::ScalarFieldFEM2D, f2::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,f1.E+f2.E)
-Base.:-(f1::ScalarFieldFEM2D, f2::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,f1.E-f2.E) 
-Base.:*(k::Number, f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,k*f.E);
-Base.:*(f::ScalarFieldFEM2D,k::Number) = ScalarFieldFEM2D(dΩ,k*f.E);
-Base.:/(f::ScalarFieldFEM2D,k::Number) = ScalarFieldFEM2D(dΩ,f.E/k);
-Base.:+(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,f.E);
-Base.:-(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,-f.E);
-Base.:real(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,real(f.E));
-Base.:imag(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,imag(f.E));
-Base.:conj(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,conj(f.E));
-Base.:abs(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,abs(f.E));
-Base.:abs2(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(dΩ,abs2(f.E));
+Base.:+(f1::ScalarFieldFEM2D, f2::ScalarFieldFEM2D) = ScalarFieldFEM2D(f1.dΩ,f1.E+f2.E)
+Base.:-(f1::ScalarFieldFEM2D, f2::ScalarFieldFEM2D) = ScalarFieldFEM2D(f1.dΩ,f1.E-f2.E) 
+Base.:*(k::Number, f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,k*f.E);
+Base.:*(f::ScalarFieldFEM2D,k::Number) = ScalarFieldFEM2D(f.dΩ,k*f.E);
+Base.:/(f::ScalarFieldFEM2D,k::Number) = ScalarFieldFEM2D(f.dΩ,f.E/k);
+Base.:+(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,f.E);
+Base.:-(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,-f.E);
+Base.:real(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,real(f.E));
+Base.:imag(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,imag(f.E));
+Base.:conj(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,conj(f.E));
+Base.:abs(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,abs(f.E));
+Base.:abs2(f::ScalarFieldFEM2D) = ScalarFieldFEM2D(f.dΩ,abs2(f.E));
+#Base.:sum(f::AbstractVector{ScalarFieldFEM2D}) = ScalarFieldFEM2D(f[1].dΩ,sum(getproperty.(f,:E)))
 
 """
     mutable struct VectorFieldFunction2D <: VectorField2D
@@ -251,16 +252,16 @@ mutable struct VectorFieldFEM2D <: VectorField2D
     Hz::Gridap.CellField
 end
 
-Base.:+(f1::VectorFieldFEM2D, f2::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,f1.Ex+f2.Ex,f1.Ey+f2.Ey,f1.Ez+f2.Ez,f1.Hx+f2.Hx,f1.Hy+f2.Hy,f1.Hz+f2.Hz)
-Base.:-(f1::VectorFieldFEM2D, f2::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,f1.Ex-f2.Ex,f1.Ey-f2.Ey,f1.Ez-f2.Ez,f1.Hx-f2.Hx,f1.Hy-f2.Hy,f1.Hz-f2.Hz) 
-Base.:*(k::Number, f::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,k*f.Ex,k*f.Ey,k*f.Ez,k*f.Hx,k*f.Hy,k*f.Hz);
-Base.:*(f::VectorFieldFEM2D,k::Number) = VectorFieldFEM2D(dΩ,k*f.Ex,k*f.Ey,k*f.Ez,k*f.Hx,k*f.Hy,k*f.Hz);
-Base.:/(f::VectorFieldFEM2D,k::Number) = VectorFieldFEM2D(dΩ,f.Ex/k,f.Ey/k,f.Ez/k,f.Hx/k,f.Hy/k,f.Hz/k);
-Base.:+(f::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,f.Ex,f.Ey,f.Ez,f.Hx,f.Hy,f.Hz);
-Base.:-(f::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,-f.Ex,-f.Ey,-f.Ez,-f.Hx,-f.Hy,-f.Hz);
-Base.:real(f::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,real(f.Ex),real(f.Ey),real(f.Ez),real(f.Hx),real(f.Hy),real(f.Hz));
-Base.:imag(f::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,imag(f.Ex),imag(f.Ey),imag(f.Ez),imag(f.Hx),imag(f.Hy),imag(f.Hz));
-Base.:conj(f::VectorFieldFEM2D) = VectorFieldFEM2D(dΩ,conj(f.Ex),conj(f.Ey),conj(f.Ez),conj(f.Hx),conj(f.Hy),conj(f.Hz));
+Base.:+(f1::VectorFieldFEM2D, f2::VectorFieldFEM2D) = VectorFieldFEM2D(f1.dΩ,f1.Ex+f2.Ex,f1.Ey+f2.Ey,f1.Ez+f2.Ez,f1.Hx+f2.Hx,f1.Hy+f2.Hy,f1.Hz+f2.Hz)
+Base.:-(f1::VectorFieldFEM2D, f2::VectorFieldFEM2D) = VectorFieldFEM2D(f1.dΩ,f1.Ex-f2.Ex,f1.Ey-f2.Ey,f1.Ez-f2.Ez,f1.Hx-f2.Hx,f1.Hy-f2.Hy,f1.Hz-f2.Hz) 
+Base.:*(k::Number, f::VectorFieldFEM2D) = VectorFieldFEM2D(f.dΩ,k*f.Ex,k*f.Ey,k*f.Ez,k*f.Hx,k*f.Hy,k*f.Hz);
+Base.:*(f::VectorFieldFEM2D,k::Number) = VectorFieldFEM2D(f.dΩ,k*f.Ex,k*f.Ey,k*f.Ez,k*f.Hx,k*f.Hy,k*f.Hz);
+Base.:/(f::VectorFieldFEM2D,k::Number) = VectorFieldFEM2D(f.dΩ,f.Ex/k,f.Ey/k,f.Ez/k,f.Hx/k,f.Hy/k,f.Hz/k);
+Base.:+(f::VectorFieldFEM2D) = VectorFieldFEM2D(f.dΩ,f.Ex,f.Ey,f.Ez,f.Hx,f.Hy,f.Hz);
+Base.:-(f::VectorFieldFEM2D) = VectorFieldFEM2D(f.dΩ,-f.Ex,-f.Ey,-f.Ez,-f.Hx,-f.Hy,-f.Hz);
+Base.:real(f::VectorFieldFEM2D) = VectorFieldFEM2D(f.dΩ,real(f.Ex),real(f.Ey),real(f.Ez),real(f.Hx),real(f.Hy),real(f.Hz));
+Base.:imag(f::VectorFieldFEM2D) = VectorFieldFEM2D(f.dΩ,imag(f.Ex),imag(f.Ey),imag(f.Ez),imag(f.Hx),imag(f.Hy),imag(f.Hz));
+Base.:conj(f::VectorFieldFEM2D) = VectorFieldFEM2D(f.dΩ,conj(f.Ex),conj(f.Ey),conj(f.Ez),conj(f.Hx),conj(f.Hy),conj(f.Hz));
 
 """
     isvalidField(f::Field)
@@ -1521,7 +1522,7 @@ MFD(m::Union{Mode{<:ScalarField2D},Mode{<:VectorField2D}},theta::Real=0) = MFD(m
 """
 function Gridap.:writevtk(name::String,f::Union{ScalarFieldFEM2D,ScalarFieldFEM1D})
     Ω=get_triangulation(f.E)
-    Gridap.writevtk(Ω,name,cellfields=["real(E)"=>real(f.E),"imag(E)"=>imag(f.E)]);
+    Gridap.writevtk(Ω,name,cellfields=["real(E)"=>real(f.E),"imag(E)"=>imag(f.E),"abs2(E)"=>abs2(f.E)]);
     return nothing;
 end
 

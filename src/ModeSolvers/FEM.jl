@@ -123,25 +123,52 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
         throw(DomainError(model, "rmin and/or rmax do not correspond to boundaries"));
     end
 
-    model2=deepcopy(model)
-    labels2 = get_face_labeling(model2)
-    list_tag=Gridap.Geometry.get_tag_name(labels2)
-    label_start="start";
-    while (label_start in list_tag)
-        label_start=label_start*"_";
+    labels = get_face_labeling(model)
+    ent_min=labels.d_to_dface_to_entity[1][posmin]
+    ent_max=labels.d_to_dface_to_entity[1][posmax]
+    find_tag=false;
+    label_start="";
+    label_end="";
+    if ((length(findall(==(ent_min),labels.d_to_dface_to_entity[1]))==1) && (length(findall(==(ent_min),labels.d_to_dface_to_entity[2]))==0) && (length(findall(==(ent_max),labels.d_to_dface_to_entity[1]))==1) && (length(findall(==(ent_max),labels.d_to_dface_to_entity[2]))==0))
+        list_tag=Gridap.Geometry.get_tag_name(labels)
+        tag_entities=get_tag_entities(labels)
+        for j in axes(tag_entities,1)
+            if tag_entities[j]==[ent_min]
+                label_start=list_tag[j]
+            end
+            if tag_entities[j]==[ent_max]
+                label_end=list_tag[j]
+            end
+        end
+        find_tag=(!isempty(label_start) && !isempty(label_end))
     end
-    label_end="end";
-    while (label_end in list_tag)
-        label_end=label_end*"_";
-    end
-    tag_start=maximum(get_face_entity(labels2))+1;
-    tag_end=tag_start+1;
-    Gridap.Geometry.add_tag!(labels2,label_start,[tag_start])
-    Gridap.Geometry.add_tag!(labels2,label_end,[tag_end])
-    labels2.d_to_dface_to_entity[1][posmin]=tag_start
-    labels2.d_to_dface_to_entity[1][posmax]=tag_end
-    if (verbose)
-        println("Tags '",label_start,"' and '",label_end,"' created.")
+
+    if (find_tag)
+        model2=model
+        if (verbose)
+            println("Boundary tags detected : '",label_start,"' and '",label_end,"'.")
+        end
+    else
+        model2=deepcopy(model)
+        labels2 = get_face_labeling(model2)
+        list_tag=Gridap.Geometry.get_tag_name(labels2)
+        label_start="start";
+        while (label_start in list_tag)
+            label_start=label_start*"_";
+        end
+        label_end="end";
+        while (label_end in list_tag)
+            label_end=label_end*"_";
+        end
+        tag_start=maximum(get_face_entity(labels2))+1;
+        tag_end=tag_start+1;
+        Gridap.Geometry.add_tag!(labels2,label_start,[tag_start])
+        Gridap.Geometry.add_tag!(labels2,label_end,[tag_end])
+        labels2.d_to_dface_to_entity[1][posmin]=tag_start
+        labels2.d_to_dface_to_entity[1][posmax]=tag_end
+        if (verbose)
+            println("Boundary tags '",label_start,"' and '",label_end,"' created.")
+        end
     end
 
     nend=sqrt(eps_fonc(rmax));
@@ -246,29 +273,52 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
 end
 
 function create_model_with_boundary(model::DiscreteModel;verbose::Bool=false)
-    model2=deepcopy(model)
     #Get boundaries in 0 and 1 dimension
-    boundary_1D=Gridap.Geometry.compute_isboundary_face(model2.grid_topology,1);
-    boundary_0D=Gridap.Geometry.compute_isboundary_face(model2.grid_topology,0);
+    boundary_1D=Gridap.Geometry.compute_isboundary_face(model.grid_topology,1);
+    boundary_0D=Gridap.Geometry.compute_isboundary_face(model.grid_topology,0);
     pos_boundary_1D=findall(boundary_1D);
     pos_boundary_0D=findall(boundary_0D);
-    #add a specific label for boundaries
-    labels2 = get_face_labeling(model2)
-    #find a new name for boundary tag
-    list_tag=Gridap.Geometry.get_tag_name(labels2)
-    label_boundary="boundary";
-    while (label_boundary in list_tag)
-        label_boundary=label_boundary*"_";
+    labels = get_face_labeling(model)
+    
+    #Check if a boundary tag exists
+    ent_0D=unique(labels.d_to_dface_to_entity[1][pos_boundary_0D])
+    ent_1D=unique(labels.d_to_dface_to_entity[2][pos_boundary_1D])
+    ent=sort(unique([ent_0D;ent_1D]))
+    label_boundary=""
+    if ((length(findall(in(ent_0D),labels.d_to_dface_to_entity[1]))==length(pos_boundary_0D)) && (length(findall(in(ent_0D),labels.d_to_dface_to_entity[2]))==length(pos_boundary_1D)) && (length(findall(in(ent_0D),labels.d_to_dface_to_entity[3]))==0))
+        list_tag=Gridap.Geometry.get_tag_name(labels)
+        tag_entities=get_tag_entities(labels)
+        for j in axes(tag_entities,1)
+            if sort(tag_entities[j])==ent
+                label_boundary=list_tag[j]
+            end
+        end
     end
-    #find the number for the list of the boundary entities
-    tag_entity=maximum(get_face_entity(labels2))+1;
-    Gridap.Geometry.add_tag!(labels2,label_boundary,[tag_entity])
-    labels2.d_to_dface_to_entity[1][pos_boundary_0D].=tag_entity
-    labels2.d_to_dface_to_entity[2][pos_boundary_1D].=tag_entity
-    if (verbose)
-        println("Tag '",label_boundary,"' created.")
+    if (isempty(label_boundary))
+        model2=deepcopy(model)
+        #add a specific label for boundaries
+        labels2 = get_face_labeling(model2)
+        #find a new name for boundary tag
+        list_tag=Gridap.Geometry.get_tag_name(labels2)
+        label_boundary="boundary";
+        while (label_boundary in list_tag)
+            label_boundary=label_boundary*"_";
+        end
+        #find the number for the list of the boundary entities
+        tag_entity=maximum(get_face_entity(labels2))+1;
+        Gridap.Geometry.add_tag!(labels2,label_boundary,[tag_entity])
+        labels2.d_to_dface_to_entity[1][pos_boundary_0D].=tag_entity
+        labels2.d_to_dface_to_entity[2][pos_boundary_1D].=tag_entity
+        if (verbose)
+            println("Boundary tag '",label_boundary,"' created.")
+        end
+        return label_boundary,model2
+    else
+        if (verbose)
+            println("Boundary tag '",label_boundary,"' detected.")
+        end
+        return label_boundary,model
     end
-    return label_boundary,model2
 end
 
 function detect_boundaries(model::DiscreteModel;verbose::Bool=false)
@@ -808,3 +858,109 @@ function FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::Disc
     end
     return sol
 end
+
+"""
+FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+
+Returns a vector of `Mode`.
+The fiber is isotropic and described with its relative permittivity. The mesh must be periodic.
+
+- lambda: wavelength
+- epsilon: function of (x,y) that describes the relative permittivity profile
+- model: DiscreteModel generated with `GridapGmsh.jl`
+- approx_neff: effective index around which the modes will be computed
+- neigs: number of modes to calculate
+- order: order of the FEM
+- field: boolean that indicates if fields must be saved
+- solver: can be :LU or :MUMPS
+- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
+- verbose: boolean that enables some outputs
+- kt: vector of the 2D Brillouin zone
+- type: :Scalar or :Vector (not implemented yet)
+
+"""
+function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+    if (lambda<=0)
+        throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
+    end
+    if (neigs<=0)
+        throw(DomainError(neigs, "The number of modes must be strictly positive"));
+    end
+    if (first(methods(eps_fonc)).nargs!=2)
+        throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
+    end
+    if (num_dims(model)!=2)
+        throw(DomainError(model, "The model must be 2D"));
+    end
+    if (approx_neff<0)
+        throw(DomainError(approx_neff, "The approximative effective index must be positive or null"));
+    end
+    if (order<1)
+        throw(DomainError(order, "The order must be at least 1"));
+    end
+    if (!(solver in [:LU,:MUMPS]))
+        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+    end
+    if (tol<0)
+        throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    if (!(type in [:Scalar,:Vector]))
+        throw(DomainError(solver, "solver must be :Scalar or :Vector"));
+    end
+
+    if (type==:Vector)
+        println("Not implemented yet")
+        return
+    end
+
+    coord=Gridap.ReferenceFEs.get_node_coordinates(model.grid)
+    if (approx_neff<=0)
+        approx_neff=maximum(sqrt.(eps_fonc.(coord)))
+        if (verbose)
+            println("Set approx_neff to ",approx_neff)
+        end
+    end
+
+
+    k2=(2*pi/lambda)^2;
+    reffe = ReferenceFE(lagrangian,Float64,order);
+    V = TestFESpace(model,reffe,conformity=:H1,vector_type=Vector{ComplexF64})
+
+    U=TrialFESpace(V,0);
+    degree = 2*order;
+    Ω = Triangulation(model);
+    dΩ = Measure(Ω,degree);
+    ikx=VectorValue(im*kt[1],im*kt[2]);
+    A_task=Threads.@spawn assemble_matrix((u,v)->∫( -∇(v)⋅∇(u)+v*(ikx⋅∇(u))-∇(v)⋅(u*ikx)+(v*ikx)⋅(u*ikx) + k2*(v⋅(eps_fonc*u))  )*dΩ,U,V);
+    B_task=Threads.@spawn assemble_matrix((u,v)->∫(v⋅u  )dΩ,U,V);
+    A=fetch(A_task);
+    B=fetch(B_task);
+    if (verbose)
+        println("Matrices of dimension ",size(A), " created.")
+    end
+    if (solver==:LU)
+        tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+    else
+        tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+    end
+    neff=sqrt.(tmp1/k2);
+    if (verbose)
+        println("Found ",length(neff)," eigenvalues.")
+    end
+    if (field)
+        sol=Vector{Mode{ScalarFieldFEM2D}}(undef,0);
+        E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
+        for i in axes(neff,1)
+            name=string("Mode LP n°",string(i));
+            push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM2D(dΩ,E[i])));
+        end
+    else
+        sol=Vector{Mode{Nothing}}(undef,0);
+        for i in axes(neff,1)
+            name=string("Mode LP n°",string(i));
+            push!(sol,Mode(name,neff[i],lambda));
+        end
+    end
+    return sol;
+end
+
