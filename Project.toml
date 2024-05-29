@@ -1,13 +1,14 @@
 name = "OpticalFibers"
 uuid = "2ac20604-6aa9-4c1a-aae8-c6d78826713f"
 authors = ["ovanvincq <olivier.vanvincq@univ-lille.fr>"]
-version = "0.2.0"
+version = "0.2.1"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
 Bessels = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
 FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
+GridapGmsh = "3025c34a-b394-11e9-2a55-3fee550c04c8"
 HCubature = "19dc6840-f33b-545b-b366-655c7e3ffd49"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
@@ -24,8 +25,8 @@ Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
 [compat]
 ArnoldiMethod = "0.4"
 Bessels = "0.2"
-FFTW = "1.7"
-Gridap = "0.17.20"
+FFTW = "1.7, 1.8"
+Gridap = "0.17.20, 0.18"
 HCubature = "1.5"
 Interpolations = "0.14, 0.15"
 LinearAlgebra = "1"
@@ -38,5 +39,4 @@ Roots = "2"
 SparseArrays = "1"
 StaticArrays = "1"
 Trapz = "2"
-julia = "1.9"
-
+julia = "1.9, 1.10"
