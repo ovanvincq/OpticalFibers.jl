@@ -404,20 +404,12 @@ model = GmshDiscreteModel("../../models/PCF.msh");
 ```
 Then we define the permittivity function:
 ```@example 4
-function eps_PCF(x)
-    Pitch=2;
-    r_hole=0.75;
-    pos=ring.(1:3)
-    xc=vcat(first.(pos)...)*Pitch;
-    yc=vcat(last.(pos)...)*Pitch;
-    for i in axes(xc,1)
-        rc=hypot(x[1]-xc[i],x[2]-yc[i]);
-        if rc<r_hole
-            return 1.0;
-        end
-    end
-    return 1.45^2;
-end
+Pitch=2
+r_hole=0.75
+pos=ring.(1:3)
+xc=vcat(first.(pos)...)*Pitch
+yc=vcat(last.(pos)...)*Pitch
+eps_PCF(x) = (any(@. hypot(x[1]-xc,x[2]-yc)<r_hole)) ? 1.0 : 1.45^2
 ```
 Then we can compute four modes whose effective indices are close to the approximate value calculated for the fundamental mode at the wavelength of 1.3 µm:
 ```@example 4
@@ -435,3 +427,69 @@ Colorbar(fig[1,2], plot_obj);
 save("FEM2_Pz.png",fig); nothing #hide
 ```
 ![Pz for FM computed with FEM](FEM2_Pz.png)
+
+## Photonic bandgap fiber
+Before designing a PBG fiber, one has to compute the PBG of the infinite microstructured media that constitutes the cladding. In this example the cladding is a hexagonal lattice of circular rods with a pitch of 6 µm. The rods has a diameter of 3 µm and a refractive index of 1.47 while the cladding background media has a refractive index of 1.45. To compute the PBG, the mesh must be periodic. Since the cell is highly symmetric, the computation of the bands can be restricted to the highest symmetry points of the irreducible Brillouin zone (Γ, M and K).
+```@example 7
+using OpticalFibers
+using OpticalFibers.ModeSolvers
+using Gridap
+using GridapGmsh
+using Plots
+
+kt,weight=compute_kt(2,:Hexagon,Irreducible=true,MeshType=:Edge,Pitch=10)
+epsilon2D=x->(1.47-0.02*(hypot(x[1],x[2])>=3))^2
+model = GmshDiscreteModel("../../models/Cell_Hexagon2.msh")
+lambda=0.8:0.025:1.6
+mm=Matrix{Vector{Mode}}(undef,length(lambda),length(kt))
+Threads.@threads for i in 1:length(kt)
+    mm[:,i]=FEM2D_periodic.(lambda,epsilon2D,Ref(model),neigs=30,field=true,kt=kt[i]);
+end
+neff=zeros(length(lambda),length(kt),30)
+P=plot()
+a=palette([:red,:green,:blue],length(kt))
+plot!(P,lambda,1.45*ones(length(lambda)),color=:black,label="")
+for i=1:30
+    neff[:,:,i]=[real(m[i].neff) for m in mm]
+    for k=1:length(kt)
+        plot!(P,lambda,neff[:,k,i],color=a[k],label="")
+    end
+end
+P.series_list[2].plotattributes[:label]="Γ"
+P.series_list[3].plotattributes[:label]="M"
+P.series_list[4].plotattributes[:label]="K"
+xlabel!("Wavelength (µm)")
+ylabel!("Effective index")
+ylims!((1.43,1.47))
+```
+
+To compute the fundamental mode, it is necessary to compute an approximative value of the effective index based on the band diagram.
+```@example 7
+using Interpolations
+neff_approx=(max.(neff[5:18,2,7],neff[5:18,1,7])+min.(neff[5:18,2,6],1.45))/2
+interp=LinearInterpolation(lambda[5:18],neff_approx)
+model_PBG = GmshDiscreteModel("../../models/PBG.msh")
+Pitch=10
+r_hole=3
+pos=ring.(1:4)
+xc=vcat(first.(pos)...)*Pitch
+yc=vcat(last.(pos)...)*Pitch
+eps_PBG(x) = (any(@. hypot(x[1]-xc,x[2]-yc)<r_hole)) ? 1.47^2 : 1.45^2
+lambda_PBG=0.925:0.005:1.115
+mode_PBG=Vector{Vector{Mode}}(undef,length(lambda_PBG))
+for i=1:length(lambda_PBG)
+    mode_PBG[i]=FEM2D(lambda_PBG[i],eps_PBG,model_PBG,neigs=1,approx_neff=interp(lambda_PBG[i]),field=true,solver=:MUMPS,dPML=4)
+end
+mode_PBG=vcat(mode_PBG...)
+neff_PBG=getproperty.(mode_PBG,:neff)
+Aeff_PBG=Aeff.(mode_PBG)
+omega=2*pi*OpticalFibers.PhysicalData.c./lambda_PBG*1E6
+beta=real(neff_PBG)*2*pi./lambda_PBG*1E6
+omega2,beta2=derivative((omega,beta),2)
+lambda2=2*pi*OpticalFibers.PhysicalData.c./omega2*1E6
+losses_PBG=losses.(mode_PBG)*1E6
+p1=plot(lambda_PBG,losses_PBG,yaxis=:log,xlabel="λ (µm)",ylabel="Losses (dB/km)")
+p2=plot(lambda_PBG,Aeff_PBG,xlabel="λ (µm)",ylabel="Aeff (µm²)")
+p3=plot(lambda2,beta2*1E26,xlabel="λ (µm)",ylabel="β₂ (10⁻²⁶ s²/m)")
+plot(p1, p2, p3, layout=(1,3), legend=false)
+```
