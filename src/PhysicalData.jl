@@ -42,8 +42,8 @@ const Z0=sqrt(mu0/eps0);
 #Refractive index functions
 
 """
-    n_Ge_Doped_Silica_Fleming(lambda::Real,xGe::Real;author::Symbol=:Fleming)
-
+    n_Ge_Doped_Silica(lambda::Real,xGe::Real;author::Symbol=:Fleming)
+ 
 If author==:Fleming, returns the refractive index of Germanium-doped Silica [Fleming1984](@cite)  
 - lambda: Wavelength (m) - Domain of validity: 360 nm ≤ lambda ≤ 4300 nm
 - xGe: Germanium Fraction (0 ≤ xGe ≤ 1)  

@@ -25,7 +25,7 @@ export add_twist_PML
 export nb_args
 export integrate1D
 export integrate2D
-
+export compute_kt
 
 """
     piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
@@ -680,4 +680,333 @@ Integrate a 2D function f(r) with r is a the tuple (x,y) for x and y from -infin
 function integrate2D(f::Function;kwargs...)
     f2=x->f(Point(x[1]/(1-x[1]^2),x[2]/(1-x[2]^2)))*(1+x[1]^2)/(1-x[1]^2)^2*(1+x[2]^2)/(1-x[2]^2)^2
     return hcubature(f2,[-1.0,-1.0],[1.0,1.0];kwargs...)
+end
+
+"""
+    compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::Real=1,MeshType::Symbol=:Internal)
+
+Compute the vectors of a 2D Brillouin zone
+- KNumber: Integer related to the number of vectors to compute
+- CellType: :Square or :Hexagon
+- Irreducible: true-> irreducible Brillouin zone, false->entire Billouin zone
+- pitch: Pitch 
+- MeshType: Internal (useful to compute the Density Of States) or :Edge (useful to compute the bandgap edge)
+"""
+function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::Real=1,MeshType::Symbol=:Internal)
+    if (KNumber<1)
+        throw(DomainError(KNumber, "KNumber must be at least 1"));
+    end
+    if (!(CellType in [:Square,:Hexagon]))
+        throw(DomainError(CellType, "CellType must be :Square or :Hexagon"));
+    end
+    if (Pitch<=0)
+        throw(DomainError(Pitch, "Pitch must be strictly positive"));
+    end
+    if (!(MeshType in [:Internal,:Edge]))
+        throw(DomainError(MeshType, "MeshType must be :Internal or :Edge"));
+    end
+    b1=zeros(2)
+    b2=zeros(2)
+    if (CellType==:Square)
+        b1[1]=2*pi/Pitch
+        b2[2]=2*pi/Pitch
+    else
+        b1[1]=2*pi/Pitch
+        b1[2]=-2*pi/Pitch/sqrt(3)
+        b2[2]=4*pi/Pitch/sqrt(3)
+    end
+    NumberofKT=1;
+    if (KNumber==1)
+        return [[0,0]],[1]
+    else
+        if Irreducible
+            if MeshType==:Internal
+                NumberofKT=div(KNumber*(KNumber+1),2)
+            else
+                NumberofKT=3*(KNumber-1)
+            end
+        else
+            if MeshType==:Internal
+                if CellType==:Square
+                    NumberofKT=KNumber^2
+                else
+                    NumberofKT=(div(KNumber*(KNumber+1),2)+div((KNumber-2)*(KNumber-1),2))*6-5
+                end
+            else
+                if CellType==:Square
+                    NumberofKT=(4*(KNumber-1)-1)*4-3
+                else
+                    NumberofKT=(4*(KNumber-1)-1)*6-5
+                end
+            end
+        end
+        kt=[Vector{Float64}(undef,2) for _ in 1:NumberofKT]
+        weight=Vector{Float64}(undef,NumberofKT)
+        counter=1
+        if CellType==:Hexagon
+            if MeshType==:Internal
+                if Irreducible
+                    for x=0:(KNumber-1)
+                        for y=0:x
+                            kt[counter][1]=y*2*pi/3/Pitch/(KNumber-1)
+                            kt[counter][2]=x*2*pi/Pitch/sqrt(3)/(KNumber-1)
+                            weight[counter]=12
+                            if (x+y==0)
+                                weight[counter]=1
+                            else
+                                if (y==x)
+                                    weight[counter]=6
+                                end
+                                if (y==0)
+                                    weight[counter]=6
+                                end
+                                if (x==KNumber-1)
+                                    weight[counter]=6
+                                    if (y==0)
+                                        weight[counter]=3
+                                    end
+                                    if (y==x)
+                                        weight[counter]=2
+                                    end
+                                end
+                            end
+                            counter=counter+1
+                        end
+                    end
+                else
+                    for x=0:(KNumber-1)
+                        for y=0:x
+                            kt[counter][1]=y*2*pi/3/Pitch/(KNumber-1)
+                            kt[counter][2]=x*2*pi/sqrt(3)/Pitch/(KNumber-1)
+                            weight[counter]=6
+                            if (x==KNumber-1)
+                                weight[counter]=3
+                                if (y==KNumber-1)
+                                    weight[counter]=2
+                                end
+                            end
+                            counter=counter+1
+                        end
+                    end
+                    for x=1:(KNumber-1)
+                        for y=1:(x-1)
+                            kt[counter][1]=-y*2*pi/3/Pitch/(KNumber-1)
+                            kt[counter][2]=x*2*pi/Pitch/sqrt(3)/(KNumber-1)
+                            weight[counter]=6
+                            if (x==(KNumber-1))
+                                weight[counter]=3
+                            end
+                            counter=counter+1
+                        end
+                    end
+                    aa=counter
+                    for t=1:5
+                        for i=2:(aa-1)
+                            kt[counter][1]=kt[i][1]*cospi(t/3)-kt[i][2]*sinpi(t/3)
+                            kt[counter][2]=kt[i][1]*sinpi(t/3)+kt[i][2]*cospi(t/3)
+                            weight[counter]=weight[i]
+                            counter=counter+1
+                        end
+                    end
+                end
+            else
+                if Irreducible
+                    for i=0:(KNumber-1)
+                        kt[counter][1]=0
+                        kt[counter][2]=i*2*pi/sqrt(3)/(KNumber-1)/Pitch
+                        weight[counter]=6
+                        if (i==0)
+                            weight[counter]=1
+                        end
+                        if (i==KNumber-1)
+                            weight[counter]=3
+                        end
+                        counter=counter+1
+                    end
+                    for i=1:(KNumber-2)
+                        kt[counter][1]=i*2*pi/3/(KNumber-1)/Pitch
+                        kt[counter][2]=2*pi/sqrt(3)/Pitch
+                        weight[counter]=6
+                        counter=counter+1
+                    end
+                    for i=(KNumber-1):-1:1
+                        kt[counter][1]=i*2*pi/3/(KNumber-1)/Pitch
+                        kt[counter][2]=i*2*pi/sqrt(3)/(KNumber-1)/Pitch
+                        weight[counter]=6
+                        if (i==(KNumber-1))
+                            weight[counter]=2
+                        end
+                        counter=counter+1
+                    end
+                else
+                    for i=0:KNumber-1
+                        kt[counter][1]=0
+                        kt[counter][2]=i*2*pi/sqrt(3)/(KNumber-1)/Pitch
+                        weight[counter]=6
+                        if (i==KNumber-1)
+                            weight[counter]=3
+                        end
+                        counter=counter+1
+                    end
+                    for i=1:KNumber-2
+                        kt[counter][1]=i*2*pi/3/(KNumber-1)/Pitch
+                        kt[counter][2]=2*pi/sqrt(3)/Pitch
+                        weight[counter]=3
+                        counter=counter+1
+                    end
+                    for i=1:KNumber-2
+                        kt[counter][1]=-i*2*pi/3/(KNumber-1)/Pitch
+                        kt[counter][2]=2*pi/sqrt(3)/Pitch
+                        weight[counter]=3
+                        counter=counter+1
+                    end
+                    for i=(KNumber-1):-1:1
+                        kt[counter][1]=i*2*pi/3/(KNumber-1)/Pitch
+                        kt[counter][2]=i*2*pi/sqrt(3)/(KNumber-1)/Pitch
+                        weight[counter]=6
+                        if (i==KNumber-1)
+                            weight[counter]=2
+                        end
+                        counter=counter+1
+                    end
+                    for t=1:5
+                        for i=2:(4*(KNumber-1)-1)
+                            kt[counter][1]=kt[i][1]*cospi(t/3)-kt[i][2]*sinpi(t/3)
+                            kt[counter][2]=kt[i][1]*sinpi(t/3)+kt[i][2]*cospi(t/3)
+                            weight[counter]=weight[i]
+                            counter=counter+1
+                        end
+                    end
+                end
+            end
+        else
+            if MeshType==:Internal
+                if Irreducible
+                    for x=0:(KNumber-1)
+                        for y=0:x
+                            kt[counter][1]=x*pi/Pitch/(KNumber-1)
+                            kt[counter][2]=y*pi/Pitch/(KNumber-1)
+                            weight[counter]=8
+                            if (x+y==0)
+                                weight[counter]=1
+                            else
+                                if (y==0)
+                                    weight[counter]=4
+                                end
+                                if (x==y)
+                                    weight[counter]=4
+                                end
+                                if (x==(KNumber-1))
+                                    weight[counter]=4
+                                    if (y==0)
+                                        weight[counter]=2
+                                    end
+                                    if (y==(KNumber-1))
+                                        weight[counter]=1
+                                    end
+                                end
+                            end
+                            counter=counter+1
+                        end
+                    end
+                else
+                    for i=0:(KNumber-1)
+                        for j=0:(KNumber-1)
+                            kt[counter][1]=-pi/Pitch+i*2*pi/Pitch/(KNumber-1)
+                            kt[counter][2]=-pi/Pitch+j*2*pi/Pitch/(KNumber-1)
+                            weight[counter]=4
+                            if (i==0)
+                                weight[counter]=2
+                            end
+                            if (i==(KNumber-1))
+                                weight[counter]=2
+                            end
+                            if ((j==0) || (j==(KNumber-1)))
+                                weight[counter]=2
+                                if ((i==0) || (i==(KNumber-1)))
+                                    weight[counter]=1
+                                end
+                            end
+                            counter=counter+1
+                        end
+                    end
+                end
+            else
+                if Irreducible
+                    for i=0:(KNumber-1)
+                        kt[counter][1]=i*pi/(KNumber-1)/Pitch
+                        kt[counter][2]=0
+                        weight[counter]=4
+                        if (i==0)
+                            weight[counter]=1
+                        end
+                        if (i==(KNumber-1))
+                            weight[counter]=2
+                        end
+                        counter=counter+1
+                    end
+                    for i=1:(KNumber-2)
+                        kt[counter][1]=i*pi/(KNumber-1)/Pitch
+                        kt[counter][2]=i*pi/(KNumber-1)/Pitch
+                        weight[counter]=4
+                        counter=counter+1
+                    end
+                    for i=(KNumber-1):-1:1
+                        kt[counter][1]=pi/Pitch
+                        kt[counter][2]=i*pi/(KNumber-1)/Pitch
+                        if (i==(KNumber-1))
+                            weight[counter]=1
+                        else
+                            weight[counter]=4
+                        end
+                        counter=counter+1
+                    end
+                else
+                    for i=0:(KNumber-1)
+                        kt[counter][1]=i*pi/(KNumber-1)/Pitch
+                        kt[counter][2]=0
+                        weight[counter]=4
+                        if (i==(KNumber-1))
+                            weight[counter]=2
+                        end
+                        counter=counter+1
+                    end
+                    for i=1:(KNumber-2)
+                        kt[counter][1]=i*pi/(KNumber-1)/Pitch
+                        kt[counter][2]=i*pi/(KNumber-1)/Pitch
+                        weight[counter]=4
+                        counter=counter+1
+                    end
+                    for i=(KNumber-1):-1:1
+                        kt[counter][1]=pi/Pitch
+                        kt[counter][2]=i*pi/(KNumber-1)/Pitch
+                        if (i==KNumber-1)
+                            weight[counter]=1
+                        else
+                            weight[counter]=2
+                        end
+                        counter=counter+1
+                    end
+                    for i=1:(KNumber-2)
+                        kt[counter][1]=i*pi/(KNumber-1)/Pitch
+                        kt[counter][2]=pi/Pitch
+                        weight[counter]=2
+                        counter=counter+1
+                    end
+                    for t=1:3
+                        for i=2:(4*(KNumber-1)-1)
+                            kt[counter][1]=kt[i][1]*cospi(t/2)-kt[i][2]*sinpi(t/2)
+                            kt[counter][2]=kt[i][1]*sinpi(t/2)+kt[i][2]*cospi(t/2)
+                            weight[counter]=weight[i]
+                            counter=counter+1
+                        end
+                    end
+                end
+            end
+        end
+        #println(counter-1)
+        #println(NumberofKT)
+        weight=weight/sum(weight)
+        return kt,weight
+    end
 end
