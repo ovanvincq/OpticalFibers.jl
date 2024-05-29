@@ -17,6 +17,7 @@ CurrentModule = OpticalFibers
     add_twist_PML
     integrate1D
     integrate2D
+    compute_kt
 ```
 
 ## Tensor

@@ -47,4 +47,4 @@ julia> plot(r,abs.(computeField(m[1],r)),label="LP01",xlabel="r (µm)",ylabel="|
 ![Fundamental mode example](docs/src/assets/fig1.png)
 
 ## Credits
-OpticalFibers.jl is maintained by Olivier Vanvincq ([university of Lille](https://www.univ-lille.fr/), [PhLAM laboratory](https://phlam.univ-lille.fr/)).
+OpticalFibers.jl is maintained by Olivier Vanvincq ([University of Lille](https://www.univ-lille.fr/), [PhLAM laboratory](https://phlam.univ-lille.fr/)).

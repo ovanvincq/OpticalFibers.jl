@@ -23,4 +23,5 @@ Note that in the case of anisotropic fibers, the dimension of the matrix is twic
     FEM1D
     FEM2D
     FEM2D_anisotropic
+    FEM2D_periodic
 ```
