@@ -1,7 +1,7 @@
 # see documentation at https://juliadocs.github.io/Documenter.jl/stable/
 push!(LOAD_PATH,"../src/")
 
-using Documenter, DocumenterCitations, OpticalFibers
+using Documenter, DocumenterCitations
 bib = CitationBibliography(joinpath(@__DIR__, "src", "refs.bib"); style=:numeric)
 
 ENV["GKSwstype"] = "100"
