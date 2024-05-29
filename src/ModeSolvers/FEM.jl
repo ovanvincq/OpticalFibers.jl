@@ -766,7 +766,7 @@ function FEM2D_vector_leaky(lambda::Real,eps_fonc::Function,model::DiscreteModel
     FEM2D_anisotropic(lambda,epsilon_tensor,mu_tensor,model2,approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
 end
 """
-FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+    FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
 
 Returns a vector of `Mode{VectorFieldFEM2D}`.
 The fiber is anisotropic and described with its relative permittivity tensor and its relative permeability tensor. The PML is assumed to be already included in the tensors epsilon and mu.
@@ -860,7 +860,7 @@ function FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::Disc
 end
 
 """
-FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+    FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
 
 Returns a vector of `Mode`.
 The fiber is isotropic and described with its relative permittivity. The mesh must be periodic.
