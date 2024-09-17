@@ -1413,7 +1413,7 @@ function findroot(k0::Float64,nu::Int64,neff::Vector{Float64},radius::Union{Vect
 end
 
 """
-    multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};maxPosition::Real=0,numberofPoints::Integer=100,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+    multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
 
 Returns a vector of `Mode{ScalarFieldFunction1D}` if type=:Scalar or a vector of `Mode{VectorFieldFunction2D}` if type=:Vector.
 
