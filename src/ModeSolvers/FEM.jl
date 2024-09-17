@@ -876,10 +876,10 @@ The fiber is isotropic and described with its relative permittivity. The mesh mu
 - tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
 - verbose: boolean that enables some outputs
 - kt: vector of the 2D Brillouin zone
-- type: :Scalar or :Vector (not implemented yet)
+- type: :Scalar or :Vector
 
 """
-function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
     if (lambda<=0)
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
@@ -908,11 +908,6 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
         throw(DomainError(solver, "solver must be :Scalar or :Vector"));
     end
 
-    if (type==:Vector)
-        println("Not implemented yet")
-        return
-    end
-
     coord=Gridap.ReferenceFEs.get_node_coordinates(model.grid)
     if (approx_neff<=0)
         approx_neff=maximum(sqrt.(eps_fonc.(coord)))
@@ -920,45 +915,109 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
             println("Set approx_neff to ",approx_neff)
         end
     end
+    
+    if (type==:Vector)
+        k=2*pi/lambda;
+        reffe1 = ReferenceFE(nedelec,order)
+        reffe2 = ReferenceFE(lagrangian,Float64,order+1)
+        Ω = Triangulation(model);
+        ikx=VectorValue(im*kt[1],im*kt[2]);
+        V1 = TestFESpace(Ω,reffe1,conformity=:Hcurl,vector_type=Vector{ComplexF64})
+        V2 = TestFESpace(Ω,reffe2,conformity=:H1,vector_type=Vector{ComplexF64}) 
+        U1 = V1;
+        U2 = V2;
+        V = MultiFieldFESpace([V1, V2])
+        U = MultiFieldFESpace([U1, U2])
+        degree = 2*order+2;
+        dΩ = Measure(Ω,degree);
+        invmu=tensor3(1.0)
 
-
-    k2=(2*pi/lambda)^2;
-    reffe = ReferenceFE(lagrangian,Float64,order);
-    V = TestFESpace(model,reffe,conformity=:H1,vector_type=Vector{ComplexF64})
-
-    U=TrialFESpace(V,0);
-    degree = 2*order;
-    Ω = Triangulation(model);
-    dΩ = Measure(Ω,degree);
-    ikx=VectorValue(im*kt[1],im*kt[2]);
-    A_task=Threads.@spawn assemble_matrix((u,v)->∫( -∇(v)⋅∇(u)+v*(ikx⋅∇(u))-∇(v)⋅(u*ikx)+(v*ikx)⋅(u*ikx) + k2*(v⋅(eps_fonc*u))  )*dΩ,U,V);
-    B_task=Threads.@spawn assemble_matrix((u,v)->∫(v⋅u  )dΩ,U,V);
-    A=fetch(A_task);
-    B=fetch(B_task);
-    if (verbose)
-        println("Matrices of dimension ",size(A), " created.")
-    end
-    if (solver==:LU)
-        tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
-    else
-        tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
-    end
-    neff=sqrt.(tmp1/k2);
-    if (verbose)
-        println("Found ",length(neff)," eigenvalues.")
-    end
-    if (field)
-        sol=Vector{Mode{ScalarFieldFEM2D}}(undef,0);
-        E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
-        for i in axes(neff,1)
-            name=string("Mode LP n°",string(i));
-            push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM2D(dΩ,E[i])));
+        a((Et1,Ez1),(Et2,Ez2))=∫( -(curl(Et2)-ikx×Et2)*(curl(Et1)+ikx×Et1)-(∇(Ez1)+ikx*Ez1)⋅(∇(Ez2)-ikx*Ez2) + k^2*(Et1⋅(eps_fonc*Et2)+Ez1⋅(eps_fonc*Ez2)) )*dΩ
+        b((Et1,Ez1),(Et2,Ez2))=∫( Et1⋅(∇(Ez2)-ikx*Ez2)-Et2⋅(∇(Ez1)+ikx*Ez1) )*dΩ
+        c((Et1,Ez1),(Et2,Ez2))=∫( -(Et1⋅Et2) )*dΩ
+    
+        A_task=Threads.@spawn assemble_matrix(a,U,V);
+        B_task=Threads.@spawn assemble_matrix(b,U,V);
+        C_task=Threads.@spawn assemble_matrix(c,U,V);
+        A=fetch(A_task);
+        B=fetch(B_task);
+        C=fetch(C_task);
+        E,F=get_companion(A,im.*B,C);
+        if (verbose)
+            println("Matrices of dimension ",size(E), " created.")
+        end
+        if (solver==:LU)
+            tmp1,tmp2=eigs_LU(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+        elseif (solver==:MUMPS)
+            tmp1,tmp2=eigs_MUMPS(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+        else
+            throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+        end
+        neff=tmp1/k;
+        if (verbose)
+            println("Found ",length(neff)," eigenvalues.")
+        end
+        if (field)
+            sol=Vector{Mode{VectorFieldFEM2D}}(undef,0);
+            for i in axes(neff,1)
+                name=string("Mode n°",string(i));
+                Et,Ez=FEFunction(U,tmp2[:,i])
+                ux=VectorValue(1.0,0.0);
+                uy=VectorValue(0.0,1.0);
+                Ex=Et⋅ux;
+                Ey=Et⋅uy;
+                Bt,Bz=computeB(Et,Ez,lambda,neff[i]);
+                Ht,Hz=computeH(Bt,Bz,invmu);
+                Hx=Ht⋅ux;
+                Hy=Ht⋅uy;
+                push!(sol,Mode(name,neff[i],lambda,VectorFieldFEM2D(dΩ,Ex,Ey,Ez,Hx,Hy,Hz)));
+            end
+        else
+            sol=Vector{Mode{Nothing}}(undef,0);
+            for i in axes(neff,1)
+                name=string("Mode n°",string(i));
+                push!(sol,Mode(name,neff[i],lambda));
+            end
         end
     else
-        sol=Vector{Mode{Nothing}}(undef,0);
-        for i in axes(neff,1)
-            name=string("Mode LP n°",string(i));
-            push!(sol,Mode(name,neff[i],lambda));
+        k2=(2*pi/lambda)^2;
+        reffe = ReferenceFE(lagrangian,Float64,order);
+        V = TestFESpace(model,reffe,conformity=:H1,vector_type=Vector{ComplexF64})
+
+        U=TrialFESpace(V,0);
+        degree = 2*order;
+        Ω = Triangulation(model);
+        dΩ = Measure(Ω,degree);
+        ikx=VectorValue(im*kt[1],im*kt[2]);
+        A_task=Threads.@spawn assemble_matrix((u,v)->∫( -∇(v)⋅∇(u)+v*(ikx⋅∇(u))-∇(v)⋅(u*ikx)+(v*ikx)⋅(u*ikx) + k2*(v⋅(eps_fonc*u))  )*dΩ,U,V);
+        B_task=Threads.@spawn assemble_matrix((u,v)->∫(v⋅u  )dΩ,U,V);
+        A=fetch(A_task);
+        B=fetch(B_task);
+        if (verbose)
+            println("Matrices of dimension ",size(A), " created.")
+        end
+        if (solver==:LU)
+            tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+        else
+            tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+        end
+        neff=sqrt.(tmp1/k2);
+        if (verbose)
+            println("Found ",length(neff)," eigenvalues.")
+        end
+        if (field)
+            sol=Vector{Mode{ScalarFieldFEM2D}}(undef,0);
+            E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
+            for i in axes(neff,1)
+                name=string("Mode LP n°",string(i));
+                push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM2D(dΩ,E[i])));
+            end
+        else
+            sol=Vector{Mode{Nothing}}(undef,0);
+            for i in axes(neff,1)
+                name=string("Mode LP n°",string(i));
+                push!(sol,Mode(name,neff[i],lambda));
+            end
         end
     end
     return sol;
