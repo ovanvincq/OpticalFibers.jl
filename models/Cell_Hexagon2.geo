@@ -5,7 +5,7 @@ Pitch=10;
 //+
 Dnorm=0.6;
 //+
-Point(1) = {0, 0, 0, 0.025};
+Point(1) = {0, 0, 0, 0.1};
 //+
 Circle(1) = {0, 0, 0, Dnorm*Pitch/2, 0, 2*Pi};
 //+
@@ -42,9 +42,9 @@ Physical Curve("Bord", 8) = {2,3,4};
 //+
 Physical Point("Bord", 8) = {3,4,5,6,7,8};
 //+
-Transfinite Curve {1} = 67 Using Progression 1;
+Transfinite Curve {1} = 27 Using Progression 1;
 //+
-Transfinite Curve {2,3,4,5,6,7} = 41 Using Progression 1;
+Transfinite Curve {2,3,4,5,6,7} = 11 Using Progression 1;
 //+
 Point{1} In Surface{1};
 //+
