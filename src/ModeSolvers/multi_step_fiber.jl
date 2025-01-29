@@ -1422,7 +1422,7 @@ Returns a vector of `Mode{ScalarFieldFunction1D}` if type=:Scalar or a vector of
 - radius: outer radius of each layer (the cladding is inifinite and has no radius)
 - index: refractive index of each layer (the cladding is included so that length(index) must be equal to length(radius)+1)
 - field: boolean that indicates if fields must be saved
-- precision: precision required on the effective index 
+- precision: absolute precision required on the effective index 
 - type: must be :Scalar or :Vector
 - firstDivision: in the case of a very multimode fiber, you can increase this number if some modes are missing. If firstDivision=0, the value of firstDivision is approximated by the solver.
 """
