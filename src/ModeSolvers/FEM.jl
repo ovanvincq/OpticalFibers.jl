@@ -325,8 +325,9 @@ function detect_boundaries(model::DiscreteModel;verbose::Bool=false)
     boundary_0D=Gridap.Geometry.compute_isboundary_face(model.grid_topology,0);
     pos_boundary_0D=findall(boundary_0D)
     coord=Gridap.ReferenceFEs.get_node_coordinates(model.grid)
-    x_boundary=[coord[pos_boundary_0D[i]][1] for i in axes(pos_boundary_0D,1)]
-    y_boundary=[coord[pos_boundary_0D[i]][2] for i in axes(pos_boundary_0D,1)]
+    cfn=compute_face_nodes(model,0)
+    x_boundary=[coord[cfn[pos_boundary_0D[i]][1]][1] for i in axes(pos_boundary_0D,1)]
+    y_boundary=[coord[cfn[pos_boundary_0D[i]][1]][2] for i in axes(pos_boundary_0D,1)]
     R_boundary=hypot.(x_boundary,y_boundary)
     R=sum(R_boundary)/length(R_boundary)
     if (sum(isapprox.(R_boundary,R))==length(R_boundary))
@@ -399,7 +400,8 @@ function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;appro
     boundary_0D=Gridap.Geometry.compute_isboundary_face(model2.grid_topology,0);
     pos_boundary_0D=findall(boundary_0D)
     coord=Gridap.ReferenceFEs.get_node_coordinates(model2.grid)
-    nend=maximum(sqrt.(eps_fonc.(coord[pos_boundary_0D])));
+    cfn=compute_face_nodes(model2,0)
+    nend=maximum(sqrt.(eps_fonc.(coord[first.(cfn[pos_boundary_0D])])));
     if (verbose)
         println("Cladding refractive index = ",nend)
     end
@@ -620,7 +622,8 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     boundary_0D=Gridap.Geometry.compute_isboundary_face(model2.grid_topology,0);
     pos_boundary_0D=findall(boundary_0D);
     coord=Gridap.ReferenceFEs.get_node_coordinates(model2.grid)
-    nend=maximum(sqrt.(eps_fonc.(coord[pos_boundary_0D])));
+    cfn=compute_face_nodes(model2,0)
+    nend=maximum(sqrt.(eps_fonc.(coord[first.(cfn[pos_boundary_0D])])));
     if (verbose)
         println("Cladding refractive index = ",nend)
     end
@@ -667,7 +670,7 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     if (field)
         sol=Vector{Mode{VectorFieldFEM2D}}(undef,0);
         for i in axes(neff,1)
-            if (neff[i]>nend) #Guided mode only
+            if (real(neff[i])>nend) #Guided mode only
                 name=string("Mode ",string(nb_mode));
                 Et,Ez=FEFunction(U,tmp2[:,i])
                 ux=VectorValue(1.0,0.0);
@@ -742,10 +745,7 @@ function FEM2D_vector_leaky(lambda::Real,eps_fonc::Function,model::DiscreteModel
         end
     end
 
-    boundary_0D=Gridap.Geometry.compute_isboundary_face(model2.grid_topology,0);
-    pos_boundary_0D=findall(boundary_0D);
     coord=Gridap.ReferenceFEs.get_node_coordinates(model2.grid)
-    nend=maximum(sqrt.(eps_fonc.(coord[pos_boundary_0D])));
     if (verbose)
         println("Cladding refractive index = ",nend)
     end
