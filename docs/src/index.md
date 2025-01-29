@@ -26,7 +26,7 @@ julia> ms=multi_step_fiber_modes(1,0,2,[1.47,1.45],field=true)
 julia> using Plots
 julia> plot(0:0.1:7,abs.(ms[1].field.E.(0:0.1:7)),xlabel="r (µm)",ylabel="|E|",label="Fundamental Mode")
 ```
-![Step Index Fiber-FM](../../docs/src/assets/SIF.png)
+![Step Index Fiber-FM](./assets/SIF.png)
 
 Computation of the fundamental vector mode (l=1) of the same fiber:
 ```julia
@@ -51,7 +51,7 @@ julia> r=0:0.01:10
 julia> plot(r,abs2.(computeField(m[1],r)),label="LP₀₁",xlabel="r (µm)",ylabel="|E|²")
 julia> plot!(r,abs2.(computeField(m[2],r)),label="LP₀₂",xlabel="r (µm)",ylabel="|E|²")
 ```
-![Fundamental mode example](../../docs/src/assets/GIF.png)
+![Fundamental mode example](./assets/GIF.png)
 
 ### Finding leaky modes of a step-index fiber with a trench using the FEM mode solver with a PML
 Let us consider a step-index fiber with a trench:
