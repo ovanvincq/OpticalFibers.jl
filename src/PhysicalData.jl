@@ -1,5 +1,7 @@
 module PhysicalData
 
+using StaticArrays
+
 export n_Ge_Doped_Silica
 export n_F_Doped_Silica
 export n_Silicon
@@ -56,18 +58,18 @@ function n_Ge_Doped_Silica(lambda::Real,xGe::Real;author::Symbol=:Fleming)
     if (author==:Fleming)
         SiO = [0.69616630,0.068404300,0.40794260,0.11624140,0.89747940,9.8961610];
         GeO = [0.80686642,0.068972606,0.71815848,0.15396605,0.85416831,11.841931];
-        result=0;
+        result=0.0;
         for i=1:3
-            @inbounds result = result + (SiO[2*i-1] + xGe*(GeO[2*i-1]-SiO[2*i-1]))*(lambda*1E6)^2/ ((lambda*1e6)^2 - (SiO[2*i] + xGe*(GeO[2*i]-SiO[2*i]))^2);
+            @inbounds @fastmath result = result + (SiO[2*i-1] + xGe*(GeO[2*i-1]-SiO[2*i-1]))*(lambda*1E6)^2/ ((lambda*1e6)^2 - (SiO[2*i] + xGe*(GeO[2*i]-SiO[2*i]))^2);
         end
         return sqrt(1+result);
     elseif (author==:Sunak)
         ASi=[0.2045154578,0.06451676258,0.1311583151];
         zSi=[0.06130807320,0.1108859848,8.964441861];
         Bi=[-0.1011783769,0.1778934999,-0.1064179581];
-        result=0;
+        result=0.0;
         for i=1:3
-            @inbounds result=result+(ASi[i]+Bi[i]*xGe)*(lambda*1E6)^2/((lambda*1E6)^2-zSi[i]^2);
+            @inbounds @fastmath result=result+(ASi[i]+Bi[i]*xGe)*(lambda*1E6)^2/((lambda*1E6)^2-zSi[i]^2);
         end
         return sqrt((2*result+1)/(1-result));
     else
@@ -87,9 +89,9 @@ function n_F_Doped_Silica(lambda::Real,xF::Real)
     ASi=[0.2045154578,0.06451676258,0.1311583151];
     zSi=[0.06130807320,0.1108859848,8.964441861];
     Bi=[-0.05413938039,-0.1788588824,-0.07445931332];
-    result=0;
+    result=0.0;
     for i=1:3
-        @inbounds result=result+(ASi[i]+Bi[i]*xF)*(lambda*1e6)^2/((lambda*1e6)^2-zSi[i]^2);
+        @inbounds @fastmath result=result+(ASi[i]+Bi[i]*xF)*(lambda*1e6)^2/((lambda*1e6)^2-zSi[i]^2);
     end
     return sqrt((2*result+1)/(1-result));
 end
@@ -153,12 +155,12 @@ Returns the absorption cross section (in m²) of ytterbium [Marciante2006](@cite
 - lambda: Wavelength (m)
 """
 function Sa_Ytterbium(lambda::Real)
-    A=[180,360,510,160,2325]*1E-27;
-    l=[950,895,918,971,975]*1E-9;
-    w=[70,24,22,12,4]*1E-9;
-    Sa=0;
+    A=[180.0,360.0,510.0,160.0,2325.0]*1E-27;
+    l=[950.0,895.0,918.0,971.0,975.0]*1E-9;
+    w=[70.0,24.0,22.0,12.0,4.0]*1E-9;
+    Sa=0.0;
     for i=1:5
-        Sa=Sa+A[i]*exp(-(lambda-l[i])^2.0/w[i]^2);
+        @inbounds @fastmath Sa=Sa+A[i]*exp(-(Float64(lambda)-l[i])^2/w[i]^2);
     end
     return Sa;
 end 
@@ -171,12 +173,12 @@ Returns the emission cross section (in m²) of ytterbium [Marciante2006](@cite)
 - lambda: Wavelength (m)
 """
 function Se_Ytterbium(lambda::Real)
-    A=[2325,160,340,175,150]*1E-27;
-    l=[975,978,1025,1050,1030]*1E-9;
-    w=[4,12,20,60,90]*1E-9;
-    Se=0;
+    A=[2325.0,160.0,340.0,175.0,150.0]*1E-27;
+    l=[975.0,978.0,1025.0,1050.0,1030.0]*1E-9;
+    w=[4.0,12.0,20.0,60.0,90.0]*1E-9;
+    Se=0.0;
     for i=1:5
-        Se=Se+A[i]*exp(-(lambda-l[i])^2.0/w[i]^2);
+        @inbounds @fastmath Se=Se+A[i]*exp(-(Float64(lambda)-l[i])^2/w[i]^2);
     end 
     return Se;
 end 
