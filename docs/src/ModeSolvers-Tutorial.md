@@ -15,8 +15,8 @@ To compute the two scalar modes, we can use the fuction `multi_step_fiber_modes`
 ```@example 1
 #using Pkg; nothing # hide
 #Pkg.activate("../.."); nothing # hide
-using OpticalFibers # hide
-using OpticalFibers.ModeSolvers # hide
+using OpticalFibers
+using OpticalFibers.ModeSolvers
 m0=multi_step_fiber_modes(1,0,2,[1.47,1.45],field=true);
 m01=m0[1]
 m1=multi_step_fiber_modes(1,1,2,[1.47,1.45],field=true);
@@ -347,7 +347,7 @@ The value given by FEM 2D is slighlty different from that predicted by the analy
 using GridapMakie
 using GLMakie
 using Gridap
-fig=GLMakie.Figure(resolution=(750,250))
+fig=GLMakie.Figure(size=(750,250))
 fig1,ax1=GLMakie.plot(fig[1,1],get_triangulation(mFEM[10]),abs(mFEM[10].field.E),axis=(aspect=DataAspect(),),colormap=:jet);
 fig2,ax2=GLMakie.plot(fig[1,2],get_triangulation(mFEM[3]),abs(mFEM[3].field.E),axis=(aspect=DataAspect(),),colormap=:jet);
 fig3,ax3=GLMakie.plot(fig[1,3],get_triangulation(mFEM[1]),abs(mFEM[1].field.E),axis=(aspect=DataAspect(),),colormap=:jet);
