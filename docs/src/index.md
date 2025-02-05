@@ -97,7 +97,7 @@ Computation of the fundamental mode at $\lambda=1.55$ µm:
 julia> ms_straight=multi_step_fiber_modes(1.55,0,3.5,[1.4457,1.4378],field=true)
 1-element Vector{Mode}:
  [LP 0,1,1.4414392004035022,1.55,Nothing]
- ```
+```
 
  To compute the funcamental mode when the fiber is bent, we need to use a 2D mesh generated with GMSH:
  ```julia
@@ -109,7 +109,7 @@ Info    : 14768 nodes
 Info    : 29536 elements
 Info    : Done reading './models/example5.msh'
 UnstructuredDiscreteModel()
- ```
+```
 and define the relative permittivity for a straight fiber and for fiber bent with a radius of curvature of 10 mm:
  ```julia
 julia> epsilon2D=x->(1.4457-(1.4457-1.4378)*(hypot(x[1],x[2])>=3.5))^2;
@@ -118,7 +118,7 @@ julia> ms2D_bent=FEM2D(1.55,epsilon2D_bent,model,field=true,neigs=1,dPML=3,appro
 1-element Vector{Mode{ScalarFieldFEM2D}}:
  [Mode LP n°1,1.4414582242320717 + 1.5096368959704397e-9im,1.55,ScalarFieldFEM2D]
 losses(ms2D_bent[1])*1E6
- ```
+```
  In this case, the bend losses are 53 dB/km
 
 ## Credits
