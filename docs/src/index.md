@@ -72,7 +72,7 @@ Computation of the guided modes $\ell=0$ with the cladding:
 julia> m2=multi_step_fiber_modes(1.6,0,[4,20],[1.44,1.41,1.43])
 1-element Vector{Mode}:
  [LP 0,1,1.4345691826495002,1.6,Nothing]
- ```
+```
 The LP₀₂ becomes leaky when adding the cladding
 
 To compute its losses, we have to use the FEM solver with a PML:
