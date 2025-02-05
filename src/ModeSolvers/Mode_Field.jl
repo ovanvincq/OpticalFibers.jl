@@ -83,8 +83,8 @@ mutable struct ScalarFieldFEM1D <: ScalarField1D
     E::Gridap.CellField
 end
 
-Base.:+(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = ((f1.nu==f2.nu) && (f1.r==f2.r)) ?  ScalarFieldFEM1D(f1.nu,f1.dΩ,f1.E+f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
-Base.:-(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = ((f1.nu==f2.nu) && (f1.r==f2.r)) ?  ScalarFieldFEM1D(f1.nu,f1.dΩ,f1.E-f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
+Base.:+(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = (f1.nu==f2.nu) ?  ScalarFieldFEM1D(f1.nu,f1.dΩ,f1.E+f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
+Base.:-(f1::ScalarFieldFEM1D, f2::ScalarFieldFEM1D) = (f1.nu==f2.nu) ?  ScalarFieldFEM1D(f1.nu,f1.dΩ,f1.E-f2.E) : throw(ArgumentError("Both fields must have the same value of nu and the same vector r"))
 Base.:*(k::Number, f::ScalarFieldFEM1D) = ScalarFieldFEM1D(f.nu,f.dΩ,k*f.E);
 Base.:*(f::ScalarFieldFEM1D,k::Number) = ScalarFieldFEM1D(f.nu,f.dΩ,k*f.E);
 Base.:/(f::ScalarFieldFEM1D,k::Number) = ScalarFieldFEM1D(f.nu,f.dΩ,f.E/k);
