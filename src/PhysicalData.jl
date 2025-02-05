@@ -21,13 +21,13 @@ const c=299792458.0;
 
 Vaccum permeability (H/m)
 """
-const mu0=1.256_637_062_12e-6;
+const mu0=4E-7*pi;
 """
     eps0=1/(mu0*c^2)
 
 Vaccum permittivity (F/m)
 """
-const eps0=1/mu0/c^2;
+const eps0=1.0/(mu0*c^2);
 """
     h=6.62607015e-34
 
@@ -39,7 +39,7 @@ const h=6.626_070_15e-34;
 
 Vaccum impedance (Ω)
 """
-const Z0=sqrt(mu0/eps0);
+const Z0=mu0*c;
 
 #Refractive index functions
 
