@@ -15,20 +15,10 @@ CurrentModule = OpticalFibers
     add_cylindrical_PML
     add_rectangular_PML
     add_twist_PML
-    integrate1D
-    integrate2D
+    function_integrate
+    function_integrate_unitful
     compute_kt
 ```
 
-## Tensor
-```@docs
-    tensorComponent
-```
-
-```@docs
-    tensor3
-    inverse
-    det
-```
 
 

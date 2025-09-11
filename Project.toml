@@ -1,41 +1,50 @@
 name = "OpticalFibers"
 uuid = "2ac20604-6aa9-4c1a-aae8-c6d78826713f"
 authors = ["ovanvincq <olivier.vanvincq@univ-lille.fr>"]
-version = "0.2.3"
+version = "0.3.0"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
 Bessels = "0e736298-9ec6-45e8-9647-e4fc86a2fe38"
-FFTW = "7a1cc6ca-52ef-59f5-83cd-3a7055c09341"
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
+GridapGmsh = "3025c34a-b394-11e9-2a55-3fee550c04c8"
 HCubature = "19dc6840-f33b-545b-b366-655c7e3ffd49"
 Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LinearMaps = "7a12625a-238d-50fd-b39a-03d52299707e"
-MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
-MUMPS = "55d2b088-9f4e-11e9-26c0-150b02ea6a46"
 NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
-ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Roots = "f2b01f46-fcfa-551c-844a-d8ac1e96c665"
 SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
+Unitful = "1986cc42-f94f-5a68-af5c-568840ba703d"
+
+[weakdeps]
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
+MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
+MUMPS = "55d2b088-9f4e-11e9-26c0-150b02ea6a46"
+gmsh_jll = "630162c2-fc9b-58b3-9910-8442a8a132e6"
+
+[extensions]
+OpticalFibersMumpsExt = ["MPI", "MUMPS"]
+OpticalFibersCudssExt = ["CUDA", "CUDSS"]
 
 [compat]
 ArnoldiMethod = "0.4"
 Bessels = "0.2"
-FFTW = "1.7, 1.8"
-Gridap = "0.17.20, 0.18"
+CUDSS = ">=0.5.3"
+Gridap = "0.19"
+GridapGmsh = "0.7"
 HCubature = "1.5"
-Interpolations = "0.14, 0.15"
+Interpolations = "0.16"
 LinearAlgebra = "1"
 LinearMaps = "3"
-MPI = "0.20"
-MUMPS = "=1.4.0"
 NearestNeighbors = "0.4"
-ProgressMeter = "1"
 Roots = "2"
 SparseArrays = "1"
 StaticArrays = "1"
 Trapz = "2"
-julia = "1.9, 1.10, 1.11"
+Unitful = "1"
+gmsh_jll = "4.9.3 - 4.11.1"
+julia = "1.10, 1.11"

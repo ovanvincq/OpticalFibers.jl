@@ -1,47 +1,45 @@
 using LinearAlgebra
 using LinearMaps
-using MUMPS
-using MPI
 using SparseArrays
 using ArnoldiMethod
 using Gridap
 using Gridap.Fields
 using HCubature
+using Unitful
 
 export piecewiseIndex
 export meshgrid
 export derivative
 export ring
-export tensor3
-export isaNumber
-export isaFunction
-export inverse
-export tensorComponent
 export approx_neff_PCF
 export approx_nFSM_PCF
 export add_cylindrical_PML
 export add_rectangular_PML
 export add_twist_PML
 export nb_args
-export integrate1D
-export integrate2D
 export compute_kt
+export function_integrate
+
+const realLength=Unitful.Quantity{<:Real,Unitful.𝐋}
+const realQuantity=Unitful.Quantity{<:Real}
+#const inverseLength=Unitful.Quantity{<:Number,Unitful.𝐋^-1}
 
 """
-    piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
+    piecewiseIndex(pos::T,r::Union{AbstractVector{<:T2},T2},n::AbstractVector) where {T<:Union{Real,realQuantity},T2<:Union{Real,realQuantity}}
 
 Function that returns the refractive index at the position pos in the case of a step-index fiber profile defined by the vectors r and n.
 """
-function piecewiseIndex(pos::Real,r::Union{AbstractVector{<:Real},Real},n::AbstractVector{<:Real})
+function piecewiseIndex(pos::T,r::Union{AbstractVector{<:T2},T2},n::AbstractVector) where {T<:Union{Real,realQuantity},T2<:Union{Real,realQuantity}}
     if (length(n) != (length(r)+1))
         throw(DimensionMismatch("dim(r) must be equal to dim(n)-1"));
     end
-    dn=diff(n);
-    result=n[1];
-    for j=1:length(dn)
-        result=result+dn[j]*(pos>r[j]);
+    if !issorted(r)
+        throw(DimensionMismatch("r must be sorted"));
     end
-    return result;
+    if !isa(r,AbstractVector)
+        r=[r]
+    end
+    return n[searchsortedfirst(r,pos)]
 end
 
 """
@@ -63,12 +61,7 @@ function meshgrid(vx::AbstractVector{T}, vy::AbstractVector{T}) where T
     (repeat(vx, m, 1), repeat(vy, 1, n))
 end
 
-"""
-    derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
-
-Function that returns the derivative dy/dx of the tuple t=(x,y)
-"""
-function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
+function derivative_iteration(t::Tuple{Vector{<:Union{Real,Quantity{<:Real}}},Vector{<:Union{Number,Quantity}}})
     if (length(t[1])!=length(t[2]))
         throw(ArgumentError("x and y must have the same length"));
     end
@@ -78,17 +71,17 @@ function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}})
 end
 
 """
-    derivative(t::Tuple{Vector{<:Real},Vector{<:Number}},order::Int64)
+    derivative(t::Tuple{Vector{<:Union{Real,Quantity{<:Real}}},Vector{<:Union{Number,Quantity}}},n::Int64=1)
 
-Function that returns the nth order derivative dy/dx of the tuple t=(x,y) 
+Function that returns the nth order derivative ``\\frac{d^n x}{dy}`` of the tuple t=(x,y) 
 """
-function derivative(t::Tuple{Vector{<:Real},Vector{<:Number}},order::Int64)
-    if (order<0)
+function derivative(t::Tuple{Vector{<:Union{Real,Quantity{<:Real}}},Vector{<:Union{Number,Quantity}}},n::Int64=1)
+    if (n<0)
         throw(ArgumentError("The order must be positive"));
     end
     temp=t;
-    for j=1:order
-        temp=derivative(temp);
+    for _=1:n
+        temp=derivative_iteration(temp);
     end
     return temp;
 end
@@ -96,7 +89,7 @@ end
 """
     ring(N::Integer)
 
-Function that returns a tuple of vectors containing the coordinates (x,y) of the holes in the Nth ring of a PCF
+Function that returns a tuple of vectors containing the coordinates (x,y) of the holes in the Nth ring of a PCF (you have to multiply by the pitch to get the real coordinates)
 """
 function ring(N::Integer)
     z=zeros(2,6*N+1);
@@ -120,7 +113,7 @@ function ring(N::Integer)
     x,y
 end
 
-struct ShiftAndInvert_MUMPS
+#=struct ShiftAndInvert_MUMPS
     m::Mumps
     B
     temp
@@ -160,6 +153,14 @@ end
 
 function eigs_MUMPS(A;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false)
     eigs_MUMPS(A,eltype(A).(SparseMatrixCSC(I,size(A,1),size(A,2)));sigma=sigma,nev=nev,tol=tol,restarts=restarts,verbose=verbose)
+end=#
+
+function eigs_MUMPS(args...;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false)
+     error("MUMPS is not loaded")
+end
+
+function eigs_CUDA(args...;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false,ir_n_steps::Int64=10)
+     error("CUDSS is not loaded")
 end
 
 struct ShiftAndInvert_LU{TA,TB,TT}
@@ -194,152 +195,7 @@ function eigs_LU(A;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,ver
 end
 
 """
-    tensorComponent
-
-Structure that describes a the component of the tensor of permittivity or permeability.
-
-- f::`Union{Function,Number}`
-"""
-struct tensorComponent
-    f::Union{Function,Number}
-end
-
-function tensorComponent(x::tensorComponent)
-    return tensorComponent(x.f)
-end
-
-isaNumber(tc::tensorComponent) = isa(tc.f,Number)
-isaFunction(tc::tensorComponent) = isa(tc.f,Function)
-
-Base.show(io::IO, tc::tensorComponent) = (isa(tc.f,Number)) ? print(io,tc.f) : print(io,"fun");
-
-function (tc::tensorComponent)(p::Point)
-    if isa(tc.f,Number)
-        return tc.f
-    else
-        return tc.f(p)
-    end
-end
-
-Base.:*(k::Number, tc::tensorComponent) = (isaNumber(tc)) ? tensorComponent(k*tc.f) : ((k==0) ? tensorComponent(0) : ((k==1) ? tensorComponent(tc.f) : tensorComponent(x->k*tc.f(x))))
-Base.:*(tc::tensorComponent,k::Number) = k*tc
-Base.:/(k::Number, tc::tensorComponent) = (isaNumber(tc)) ? tensorComponent(k/tc.f) : ((k==0) ? tensorComponent(0) : tensorComponent(x->k/tc.f(x)))
-Base.:/(tc::tensorComponent,k::Number) = (isaNumber(tc)) ? tensorComponent(tc.f/k) : tensorComponent(x->tc.f(x)/k)
-Base.:+(k::Number, tc::tensorComponent) = (isaNumber(tc)) ? tensorComponent(k+tc.f) : ((k==0) ? tensorComponent(tc.f) : tensorComponent(x->k+tc.f(x)))
-Base.:+(tc::tensorComponent,k::Number) = k+tc
-Base.:-(k::Number, tc::tensorComponent) = (isaNumber(tc)) ? tensorComponent(k-tc.f) : tensorComponent(x->k-tc.f(x))
-Base.:-(tc::tensorComponent,k::Number) = (isaNumber(tc)) ? tensorComponent(tc.f-k) : ((k==0) ? tensorComponent(tc.f) : tensorComponent(x->tc.f(x)-k))
-
-Base.:*(fun::Function, tc::tensorComponent) = (isaNumber(tc)) ? ((tc.f==0) ? tensorComponent(0) : ((tc.f==1) ? tensorComponent(fun) : tensorComponent(x->fun(x)*tc.f))) : tensorComponent(x->fun(x)*tc.f(x))
-Base.:*(tc::tensorComponent,fun::Function) = fun*tc
-Base.:/(fun::Function, tc::tensorComponent) = (isaNumber(tc)) ? tensorComponent(x->fun(x)/tc.f) : tensorComponent(x->fun(x)/tc.f(x))
-Base.:/(tc::tensorComponent,fun::Function) = (isaNumber(tc)) ? tensorComponent(x->tc.f/fun(x)) : tensorComponent(x->tc.f(x)/fun(x))
-Base.:+(fun::Function, tc::tensorComponent) = (isaNumber(tc)) ? ((tc.f==0) ? tensorComponent(fun) : tensorComponent(x->fun(x)+tc.f)) : tensorComponent(x->fun(x)+tc.f(x))
-Base.:+(tc::tensorComponent,fun::Function) = fun+tc
-Base.:-(fun::Function, tc::tensorComponent) = (isaNumber(tc)) ? tensorComponent(x->fun(x)-tc.f) : tensorComponent(x->fun(x)-tc.f(x))
-Base.:-(tc::tensorComponent,fun::Function) = (isaNumber(tc)) ? tensorComponent(x->tc.f-fun(x)) : tensorComponent(x->tc.f(x)-fun(x))
-
-Base.:*(tc1::tensorComponent, tc2::tensorComponent) = (isaNumber(tc1)) ? tc1.f*tc2 : tc1.f*tc2
-Base.:/(tc1::tensorComponent, tc2::tensorComponent) = (isaNumber(tc1)) ? tc1.f/tc2 : tc1/tc2.f
-Base.:+(tc1::tensorComponent, tc2::tensorComponent) = (isaNumber(tc1)) ? tc1.f+tc2 : tc1+tc2.f
-Base.:-(tc1::tensorComponent, tc2::tensorComponent) = (isaNumber(tc1)) ? tc1.f-tc2 : tc1-tc2.f
-Base.:+(tc::tensorComponent) = tc
-Base.:-(tc::tensorComponent) = (isa(tc.f,Number)) ? tensorComponent(-tc.f) : tensorComponent(x->-tc.f(x))
-
-"""
-    tensor
-
-Structure that describes a tensor of permittivity or permeability. Each of the 9 components of the a `tensor3` is a function of a tuple (x,y).
-
-- xx :: `tensorComponent`
-- yx :: `tensorComponent`
-- zx :: `tensorComponent`
-- xy :: `tensorComponent`
-- yy :: `tensorComponent`
-- zy :: `tensorComponent`
-- xz :: `tensorComponent`
-- yz :: `tensorComponent`
-- zz :: `tensorComponent`
-"""
-struct tensor3
-    xx::tensorComponent
-    yx::tensorComponent
-    zx::tensorComponent
-    xy::tensorComponent
-    yy::tensorComponent
-    zy::tensorComponent
-    xz::tensorComponent
-    yz::tensorComponent
-    zz::tensorComponent
-    tensor3(xx::Union{Function,Number,tensorComponent},yx::Union{Function,Number,tensorComponent},zx::Union{Function,Number,tensorComponent},xy::Union{Function,Number,tensorComponent},yy::Union{Function,Number,tensorComponent},zy::Union{Function,Number,tensorComponent},xz::Union{Function,Number,tensorComponent},yz::Union{Function,Number,tensorComponent},zz::Union{Function,Number,tensorComponent}) = new(tensorComponent(xx),tensorComponent(yx),tensorComponent(zx),tensorComponent(xy),tensorComponent(yy),tensorComponent(zy),tensorComponent(xz),tensorComponent(yz),tensorComponent(zz))
-    tensor3(xx::Union{Function,Number,tensorComponent},yy::Union{Function,Number,tensorComponent},zz::Union{Function,Number,tensorComponent}) = new(tensorComponent(xx),tensorComponent(0),tensorComponent(0),tensorComponent(0),tensorComponent(yy),tensorComponent(0),tensorComponent(0),tensorComponent(0),tensorComponent(zz))
-    tensor3(xx::Union{Function,Number,tensorComponent}) = new(tensorComponent(xx),tensorComponent(0),tensorComponent(0),tensorComponent(0),tensorComponent(xx),tensorComponent(0),tensorComponent(0),tensorComponent(0),tensorComponent(xx))
-end
-
-function Base.show(io::IO, t::tensor3)
-    println(io,t.xx)
-    println(io,t.yx)
-    println(io,t.zx)
-    println(io,t.xy)
-    println(io,t.yy)
-    println(io,t.zy)
-    println(io,t.xz)
-    println(io,t.yz)
-    print(io,t.zz)
-end
-
-"""
-    det(t::tensor3)
-
-Returns the determinant of the tensor t
-"""
-function LinearAlgebra.:det(t::tensor3)
-    return t.xx*t.yy*t.zz+t.xy*t.yz*t.zx+t.xz*t.yx*t.zy-t.xx*t.yz*t.zy-t.xy*t.yx*t.zz-t.xz*t.yy*t.zx
-end
-
-"""
-    inverse(t::tensor3)
-
-Returns the inverse of the tensor t
-"""
-function inverse(t::tensor3)
-    d=det(t);
-    xx=(t.yy*t.zz-t.yz*t.zy)/d
-    yx=(t.yz*t.zx-t.yx*t.zz)/d
-    zx=(t.yx*t.zy-t.yy*t.zx)/d
-    xy=(t.xz*t.zy-t.xy*t.zz)/d
-    yy=(t.xx*t.zz-t.xz*t.zx)/d
-    zy=(t.xy*t.zx-t.xx*t.zy)/d
-    xz=(t.xy*t.yz-t.xz*t.yy)/d
-    yz=(t.xz*t.yx-t.xx*t.yz)/d
-    zz=(t.xx*t.yy-t.xy*t.yx)/d
-    return tensor3(xx,yx,zx,xy,yy,zy,xz,yz,zz);
-end
-
-Base.:*(k::Union{Number,Function,tensorComponent}, t::tensor3) = tensor3(k*t.xx,k*t.yx,k*t.zx,k*t.xy,k*t.yy,k*t.zy,k*t.xz,k*t.yz,k*t.zz);
-Base.:*(t::tensor3, k::Union{Number,Function,tensorComponent}) = k*t;
-Base.:+(t1::tensor3, t2::tensor3) = tensor3(t1.xx+t2.xx,t1.yx+t2.yx,t1.zx+t2.zx,t1.xy+t2.xy,t1.yy+t2.yy,t1.zy+t2.zy,t1.xz+t2.xz,t1.yz+t2.yz,t1.zz+t2.zz);
-Base.:+(t::tensor3) = t;
-Base.:-(t1::tensor3, t2::tensor3) = tensor3(t1.xx-t2.xx,t1.yx-t2.yx,t1.zx-t2.zx,t1.xy-t2.xy,t1.yy-t2.yy,t1.zy-t2.zy,t1.xz-t2.xz,t1.yz-t2.yz,t1.zz-t2.zz);
-Base.:-(t::tensor3) = tensor3(-t.xx,-t.yx,-t.zx,-t.xy,-t.yy,-t.zy,-t.xz,-t.yz,-t.zz);
-Base.:/(t::tensor3, k::Union{Number,Function,tensorComponent}) = tensor3(t.xx/k,t.yx/k,t.zx/k,t.xy/k,t.yy/k,t.zy/k,t.xz/k,t.yz/k,t.zz/k);
-Base.:/(k::Union{Number,Function,tensorComponent}, t::tensor3) = k*inverse(t);
-Base.:*(t1::tensor3, t2::tensor3) = tensor3(t1.xx*t2.xx+t1.xy*t2.yx+t1.xz*t2.zx
-,t1.yx*t2.xx+t1.yy*t2.yx+t1.yz*t2.zx
-,t1.zx*t2.xx+t1.zy*t2.yx+t1.zz*t2.zx
-,t1.xx*t2.xy+t1.xy*t2.yy+t1.xz*t2.zy
-,t1.yx*t2.xy+t1.yy*t2.yy+t1.yz*t2.zy
-,t1.zx*t2.xy+t1.zy*t2.yy+t1.zz*t2.zy
-,t1.xx*t2.xz+t1.xy*t2.yz+t1.xz*t2.zz
-,t1.yx*t2.xz+t1.yy*t2.yz+t1.yz*t2.zz
-,t1.zx*t2.xz+t1.zy*t2.yz+t1.zz*t2.zz);
-Base.:/(t1::tensor3, t2::tensor3) = t1*inverse(t2);
-
-
-################################
-
-"""
-    add_cylindrical_PML(epsmu::Union{Number,Function,tensor3},r_pml::Real,d_pml::Real,alpha::Real)
+    add_cylindrical_PML(epsmu::Union{Number,Function},r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
 
 Function that returns a tensor of permittivity/permeability with a cylindrical PML
 
@@ -348,124 +204,51 @@ Function that returns a tensor of permittivity/permeability with a cylindrical P
 - d_pml: PML thickness
 - alphaPML: attenuation factor of the PML
 """
-function add_cylindrical_PML(epsmu::Union{Number,Function,tensor3},r_pml::Real,d_pml::Real,alphaPML::Real)
+function add_cylindrical_PML(epsmu::Union{Number,Function},r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
     Gridap.Helpers.@abstractmethod
 end
 
-function add_cylindrical_PML(epsmu::Number,r_pml::Real,d_pml::Real,alphaPML::Real)
-    function pml_xx(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(epsmu);
-        else
-            phi=atan(x[2],x[1]);
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu*(rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
-        end
-    end
-    function pml_yy(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(epsmu);
-        else
-            phi=atan(x[2],x[1]);
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu*(rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
-        end
-    end
-    function pml_zz(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(epsmu);
-        else
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu*(rt/r)*sr;
-        end
-    end
-    function pml_xy(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(0.0);
-        else
-            phi=atan(x[2],x[1]);
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu*sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
-        end
-    end
-    return tensor3(pml_xx,pml_xy,0,pml_xy,pml_yy,0,0,0,pml_zz);
-end
 
-function add_cylindrical_PML(epsmu::Function,r_pml::Real,d_pml::Real,alphaPML::Real)
-    function pml_xx(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(epsmu(x));
-        else
-            phi=atan(x[2],x[1]);
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu(x)*(rt/(r*sr)*(cos(phi))^2+(r*sr/rt)*(sin(phi))^2);
-        end
+function add_cylindrical_PML(epsmu::Function,r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
+    if (dimension(r_pml)!=dimension(d_pml))
+        throw(ArgumentError("r_pml and d_pml must have the same dimension"));
     end
-    function pml_yy(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(epsmu(x));
-        else
-            phi=atan(x[2],x[1]);
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu(x)*(rt/(r*sr)*(sin(phi))^2+(r*sr/rt)*(cos(phi))^2);
-        end
-    end
-    function pml_zz(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(epsmu(x));
-        else
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu(x)*(rt/r)*sr;
-        end
-    end
-    function pml_xy(x)
-        r=hypot(x[1],x[2]);
-        if r<=r_pml
-            return ComplexF64(0.0);
-        else
-            phi=atan(x[2],x[1]);
-            rt=r+im*alphaPML/3.0*(r-r_pml)^3/(d_pml)^2;
-            sr=1.0+im*alphaPML*(r-r_pml)^2/(d_pml)^2;
-            return epsmu(x)*sin(phi)*cos(phi)*(rt/(r*sr)-r*sr/rt);
-        end
-    end
-    return tensor3(pml_xx,pml_xy,0,pml_xy,pml_yy,0,0,0,pml_zz);
-end
-
-function add_cylindrical_PML(epsmu::tensor3,r_pml::Real,d_pml::Real,alphaPML::Real)
     r(x)=hypot(x[1],x[2]);
     Sr(x)=1.0+im*alphaPML*(r(x)-r_pml)^2/(d_pml)^2;
     Sphi(x)=1.0+im*alphaPML/3.0*(r(x)-r_pml)^3/(d_pml)^2/r(x);
-    C(x)=cos(atan(x[2],x[1]));
-    S(x)=sin(atan(x[2],x[1]));
-    Txx(x)=(r(x)<r_pml) ? ComplexF64(1.0) : C(x)^2/Sr(x)+S(x)^2/Sphi(x);
-    Txy(x)=(r(x)<r_pml) ? ComplexF64(0.0) : (1/Sr(x)-1/Sphi(x))*C(x)*S(x);
-    Tyy(x)=(r(x)<r_pml) ? ComplexF64(1.0) : S(x)^2/Sr(x)+C(x)^2/Sphi(x);
-    T1=tensor3(Txx,Txy,0,Txy,Tyy,0,0,0,1);
-    Txx2(x)=(r(x)<r_pml) ? ComplexF64(1.0) : C(x)^2*Sphi(x)+S(x)^2*Sr(x);
-    Txy2(x)=(r(x)<r_pml) ? ComplexF64(0.0) : (Sphi(x)-Sr(x))*C(x)*S(x);
-    Tyy2(x)=(r(x)<r_pml) ? ComplexF64(1.0) : S(x)^2*Sphi(x)+C(x)^2*Sr(x);
-    Tzz2(x)=(r(x)<r_pml) ? ComplexF64(1.0) : Sr(x)*Sphi(x)
-    T2=tensor3(Txx2,Txy2,0,Txy2,Tyy2,0,0,0,Tzz2);
-    return (T1*epsmu*T2)
+    C(x)=x[1]/r(x);#cos(atan(x[2],x[1]));
+    S(x)=x[2]/r(x);#sin(atan(x[2],x[1]));
+    if length(epsmu(Point(0,0)*unit(r_pml)))==1
+        T1T2(x)=(r(x)<r_pml) ? TensorValue(ComplexF64(1.0),0,0,0,ComplexF64(1.0),0,0,0,ComplexF64(1.0)) : TensorValue(C(x)^2*Sphi(x)/Sr(x)+S(x)^2*Sr(x)/Sphi(x),(Sphi(x)/Sr(x)-Sr(x)/Sphi(x))*C(x)*S(x),0,(Sphi(x)/Sr(x)-Sr(x)/Sphi(x))*C(x)*S(x),S(x)^2*Sphi(x)/Sr(x)+C(x)^2*Sr(x)/Sphi(x),0,0,0,Sr(x)*Sphi(x));
+        return x->epsmu(x)*T1T2(x)
+    else
+        T1(x)=(r(x)<r_pml) ? TensorValue(ComplexF64(1.0),0,0,0,ComplexF64(1.0),0,0,0,ComplexF64(1.0)) : TensorValue(C(x)^2/Sr(x)+S(x)^2/Sphi(x),(1/Sr(x)-1/Sphi(x))*C(x)*S(x),0,(1/Sr(x)-1/Sphi(x))*C(x)*S(x),S(x)^2/Sr(x)+C(x)^2/Sphi(x),0,0,0,1.0);
+        T2(x)=(r(x)<r_pml) ? TensorValue(ComplexF64(1.0),0,0,0,ComplexF64(1.0),0,0,0,ComplexF64(1.0)) : TensorValue(C(x)^2*Sphi(x)+S(x)^2*Sr(x),(Sphi(x)-Sr(x))*C(x)*S(x),0,(Sphi(x)-Sr(x))*C(x)*S(x),S(x)^2*Sphi(x)+C(x)^2*Sr(x),0,0,0,Sr(x)*Sphi(x)); #T1/det(T1)
+        return x->T1(x)⋅epsmu(x)⋅T2(x)
+    end
+end
+
+function add_cylindrical_PML(epsmu::Number,r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
+    if (dimension(r_pml)!=dimension(d_pml))
+        throw(ArgumentError("r_pml and d_pml must have the same dimension"));
+    end
+    r(x)=hypot(x[1],x[2]);
+    Sr(x)=1.0+im*alphaPML*(r(x)-r_pml)^2/(d_pml)^2;
+    Sphi(x)=1.0+im*alphaPML/3.0*(r(x)-r_pml)^3/(d_pml)^2/r(x);
+    C(x)=x[1]/r(x);#cos(atan(x[2],x[1]));
+    S(x)=x[2]/r(x);#sin(atan(x[2],x[1]));
+    if length(epsmu)==1
+        T1T2(x)=(r(x)<r_pml) ? TensorValue(ComplexF64(1.0),0,0,0,ComplexF64(1.0),0,0,0,ComplexF64(1.0)) : TensorValue(C(x)^2*Sphi(x)/Sr(x)+S(x)^2*Sr(x)/Sphi(x),(Sphi(x)/Sr(x)-Sr(x)/Sphi(x))*C(x)*S(x),0,(Sphi(x)/Sr(x)-Sr(x)/Sphi(x))*C(x)*S(x),S(x)^2*Sphi(x)/Sr(x)+C(x)^2*Sr(x)/Sphi(x),0,0,0,Sr(x)*Sphi(x));
+        return x->epsmu*T1T2(x)
+    else
+        T1(x)=(r(x)<r_pml) ? TensorValue(ComplexF64(1.0),0,0,0,ComplexF64(1.0),0,0,0,ComplexF64(1.0)) : TensorValue(C(x)^2/Sr(x)+S(x)^2/Sphi(x),(1/Sr(x)-1/Sphi(x))*C(x)*S(x),0,(1/Sr(x)-1/Sphi(x))*C(x)*S(x),S(x)^2/Sr(x)+C(x)^2/Sphi(x),0,0,0,1.0);
+        T2(x)=(r(x)<r_pml) ? TensorValue(ComplexF64(1.0),0,0,0,ComplexF64(1.0),0,0,0,ComplexF64(1.0)) : TensorValue(C(x)^2*Sphi(x)+S(x)^2*Sr(x),(Sphi(x)-Sr(x))*C(x)*S(x),0,(Sphi(x)-Sr(x))*C(x)*S(x),S(x)^2*Sphi(x)+C(x)^2*Sr(x),0,0,0,Sr(x)*Sphi(x)); #T1/det(T1)
+        return x->T1(x)⋅epsmu⋅T2(x)
+    end
 end
 
 """
-    add_rectangular_PML(epsmu::Union{Number,Function,tensor3},x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alpha::Real)
+    add_rectangular_PML(epsmu::Union{Number,Function},x_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},y_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
 
 Function that returns a tensor of permittivity/permeability with a rectangular PML located at [x_pml,x_pml+dx_pml], [-x_pml-dx_pml,-x_pml], [y_pml,y_pml+dy_pml], [-y_pml-dy_pml,-y_pml]
 
@@ -476,33 +259,45 @@ Function that returns a tensor of permittivity/permeability with a rectangular P
 - dy_pml: PML thickness in the y direction
 - alphaPML: attenuation factor of the PML
 """
-function add_rectangular_PML(epsmu::Union{Number,Function,tensor3},x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alphaPML::Real)
+function add_rectangular_PML(epsmu::Union{Number,Function},x_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},y_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
     Gridap.Helpers.@abstractmethod
 end
 
-function add_rectangular_PML(epsmu::Number,x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alphaPML::Real)
-    Sx=x->1.0+im*alphaPML*(max(abs(x[1])-x_pml,0))^2/(dx_pml)^2;
-    Sy=x->1.0+im*alphaPML*(max(abs(x[2])-y_pml,0))^2/(dy_pml)^2;
-    return tensor3(x->epsmu*Sy(x)/Sx(x),x->epsmu*Sx(x)/Sy(x),x->epsmu*Sx(x)*Sy(x));
+function add_rectangular_PML(epsmu::Number,x_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},y_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
+    if !(dimension(x_pml)==dimension(dx_pml)==dimension(y_pml)==dimension(dy_pml))
+        throw(ArgumentError("x_pml, dx_pml, y_pml, dy_pml must have the same dimension"));
+    end
+    Sx=x->1.0+im*alphaPML*(max(abs(x[1])-x_pml,0*unit(x_pml)))^2/(dx_pml)^2;
+    Sy=x->1.0+im*alphaPML*(max(abs(x[2])-y_pml,0*unit(x_pml)))^2/(dy_pml)^2;
+    if length(epsmu)==1
+        S1S2(x)=diagonal_tensor(VectorValue(Sy(x)/Sx(x),Sx(x)/Sy(x),Sx(x)*Sy(x)))
+        return x->epsmu*S1S2(x)
+    else
+        S1(x)=diagonal_tensor(VectorValue(1.0/Sx(x),1.0/Sy(x),1.0));
+        S2(x)=diagonal_tensor(VectorValue(Sy(x),Sx(x),Sx(x)*Sy(x)));
+        return x->S1(x)⋅epsmu⋅S2(x)
+    end
 end
 
-function add_rectangular_PML(epsmu::Function,x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alphaPML::Real)
-    Sx=x->1.0+im*alphaPML*(max(abs(x[1])-x_pml,0))^2/(dx_pml)^2;
-    Sy=x->1.0+im*alphaPML*(max(abs(x[2])-y_pml,0))^2/(dy_pml)^2;
-    return tensor3(x->epsmu(x)*Sy(x)/Sx(x),x->epsmu(x)*Sx(x)/Sy(x),x->epsmu(x)*Sx(x)*Sy(x));
-end
-
-function add_rectangular_PML(epsmu::tensor3,x_pml::Real,dx_pml::Real,y_pml::Real,dy_pml::Real,alphaPML::Real)
-    Sx=x->1.0+im*alphaPML*(max(abs(x[1])-x_pml,0))^2/(dx_pml)^2;
-    Sy=x->1.0+im*alphaPML*(max(abs(x[2])-y_pml,0))^2/(dy_pml)^2;
-    S1=tensor3(x->1/Sx(x),x->1/Sy(x),1);
-    S2=tensor3(Sy,Sx,x->Sx(x)*Sy(x))
-    return (S1*epsmu*S2)
+function add_rectangular_PML(epsmu::Function,x_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},y_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
+    if !(dimension(x_pml)==dimension(dx_pml)==dimension(y_pml)==dimension(dy_pml))
+        throw(ArgumentError("x_pml, dx_pml, y_pml, dy_pml must have the same dimension"));
+    end
+    Sx=x->1.0+im*alphaPML*(max(abs(x[1])-x_pml,0*unit(x_pml)))^2/(dx_pml)^2;
+    Sy=x->1.0+im*alphaPML*(max(abs(x[2])-y_pml,0*unit(x_pml)))^2/(dy_pml)^2;
+    if length(epsmu(Point(0,0)*unit(x_pml)))==1
+        S1S2(x)=diagonal_tensor(VectorValue(Sy(x)/Sx(x),Sx(x)/Sy(x),Sx(x)*Sy(x)))
+        return x->epsmu(x)*S1S2(x)
+    else
+        S1(x)=diagonal_tensor(VectorValue(1.0/Sx(x),1.0/Sy(x),1.0));
+        S2(x)=diagonal_tensor(VectorValue(Sy(x),Sx(x),Sx(x)*Sy(x)));
+        return x->S1(x)⋅epsmu(x)⋅S2(x)
+    end
 end
 
 
 """
-    add_rectangular_PML(epsmu::Union{Number,Function,tensor3},xm_pml::Real,xp_pml::Real,dx_pml::Real,ym_pml::Real,yp_pml::Real,dy_pml::Real,alphaPML::Real)
+    add_rectangular_PML(epsmu::Union{Number,Function},xm_pml::Union{Real,realLength},xp_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},ym_pml::Union{Real,realLength},yp_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
 
 Function that returns a tensor of permittivity/permeability with a rectangular PML located at [xp_pml,xp_pml+dx_pml], [-xm_pml-dx_pml,-xm_pml], [yp_pml,yp_pml+dy_pml], [-ym_pml-dy_pml,-ym_pml]
 
@@ -515,33 +310,45 @@ Function that returns a tensor of permittivity/permeability with a rectangular P
 - dy_pml: PML thickness in the y direction
 - alphaPML: attenuation factor of the PML
 """
-function add_rectangular_PML(epsmu::Union{Number,Function,tensor3},xm_pml::Real,xp_pml::Real,dx_pml::Real,ym_pml::Real,yp_pml::Real,dy_pml::Real,alphaPML::Real)
+function add_rectangular_PML(epsmu::Union{Number,Function},xm_pml::Union{Real,realLength},xp_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},ym_pml::Union{Real,realLength},yp_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
     Gridap.Helpers.@abstractmethod
 end
 
-function add_rectangular_PML(epsmu::Number,xm_pml::Real,xp_pml::Real,dx_pml::Real,ym_pml::Real,yp_pml::Real,dy_pml::Real,alphaPML::Real)
-    Sx=x->1.0+im*alphaPML*(max(x[1]-xp_pml,0))^2/(dx_pml)^2+im*alphaPML*(max(xm_pml-x[1],0))^2/(dx_pml)^2;
-    Sy=x->1.0+im*alphaPML*(max(x[2]-yp_pml,0))^2/(dy_pml)^2+im*alphaPML*(max(ym_pml-x[2],0))^2/(dy_pml)^2;
-    return tensor3(x->epsmu*Sy(x)/Sx(x),x->epsmu*Sx(x)/Sy(x),x->epsmu*Sx(x)*Sy(x));
+function add_rectangular_PML(epsmu::Number,xm_pml::Union{Real,realLength},xp_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},ym_pml::Union{Real,realLength},yp_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
+    if !(dimension(xp_pml)==dimension(xm_pml)==dimension(dx_pml)==dimension(yp_pml)==dimension(ym_pml)==dimension(dy_pml))
+        throw(ArgumentError("xm_pml, xp_pml, dx_pml, ym_pml, yp_pml, dy_pml must have the same dimension"));
+    end
+    Sx=x->1.0+im*alphaPML*(max(x[1]-xp_pml,0*unit(xm_pml)))^2/(dx_pml)^2+im*alphaPML*(max(xm_pml-x[1],0*unit(xm_pml)))^2/(dx_pml)^2;
+    Sy=x->1.0+im*alphaPML*(max(x[2]-yp_pml,0*unit(xm_pml)))^2/(dy_pml)^2+im*alphaPML*(max(ym_pml-x[2],0*unit(xm_pml)))^2/(dy_pml)^2;
+    if length(epsmu)==1
+        S1S2(x)=diagonal_tensor(VectorValue(Sy(x)/Sx(x),Sx(x)/Sy(x),Sx(x)*Sy(x)))
+        return x->epsmu*S1S2(x)
+    else
+        S1(x)=diagonal_tensor(VectorValue(1.0/Sx(x),1.0/Sy(x),1.0));
+        S2(x)=diagonal_tensor(VectorValue(Sy(x),Sx(x),Sx(x)*Sy(x)));
+        return x->S1(x)⋅epsmu⋅S2(x)
+    end
 end
 
-function add_rectangular_PML(epsmu::Function,xm_pml::Real,xp_pml::Real,dx_pml::Real,ym_pml::Real,yp_pml::Real,dy_pml::Real,alphaPML::Real)
-    Sx=x->1.0+im*alphaPML*(max(x[1]-xp_pml,0))^2/(dx_pml)^2+im*alphaPML*(max(xm_pml-x[1],0))^2/(dx_pml)^2;
-    Sy=x->1.0+im*alphaPML*(max(x[2]-yp_pml,0))^2/(dy_pml)^2+im*alphaPML*(max(ym_pml-x[2],0))^2/(dy_pml)^2;
-    return tensor3(x->epsmu(x)*Sy(x)/Sx(x),x->epsmu(x)*Sx(x)/Sy(x),x->epsmu(x)*Sx(x)*Sy(x));
-end
-
-function add_rectangular_PML(epsmu::tensor3,xm_pml::Real,xp_pml::Real,dx_pml::Real,ym_pml::Real,yp_pml::Real,dy_pml::Real,alphaPML::Real)
-    Sx=x->1.0+im*alphaPML*(max(x[1]-xp_pml,0))^2/(dx_pml)^2+im*alphaPML*(max(xm_pml-x[1],0))^2/(dx_pml)^2;
-    Sy=x->1.0+im*alphaPML*(max(x[2]-yp_pml,0))^2/(dy_pml)^2+im*alphaPML*(max(ym_pml-x[2],0))^2/(dy_pml)^2;
-    S1=tensor3(x->1/Sx(x),x->1/Sy(x),x->1);
-    S2=tensor3(Sy,Sx,x->Sx(x)*Sy(x))
-    return (S1*epsmu*S2)
+function add_rectangular_PML(epsmu::Function,xm_pml::Union{Real,realLength},xp_pml::Union{Real,realLength},dx_pml::Union{Real,realLength},ym_pml::Union{Real,realLength},yp_pml::Union{Real,realLength},dy_pml::Union{Real,realLength},alphaPML::Real)
+    if !(dimension(xp_pml)==dimension(xm_pml)==dimension(dx_pml)==dimension(yp_pml)==dimension(ym_pml)==dimension(dy_pml))
+        throw(ArgumentError("xm_pml, xp_pml, dx_pml, ym_pml, yp_pml, dy_pml must have the same dimension"));
+    end
+    Sx=x->1.0+im*alphaPML*(max(x[1]-xp_pml,0*unit(xm_pml)))^2/(dx_pml)^2+im*alphaPML*(max(xm_pml-x[1],0*unit(xm_pml)))^2/(dx_pml)^2;
+    Sy=x->1.0+im*alphaPML*(max(x[2]-yp_pml,0*unit(xm_pml)))^2/(dy_pml)^2+im*alphaPML*(max(ym_pml-x[2],0*unit(xm_pml)))^2/(dy_pml)^2;
+    if length(epsmu(Point(0,0)*unit(xm_pml)))==1
+        S1S2(x)=diagonal_tensor(VectorValue(Sy(x)/Sx(x),Sx(x)/Sy(x),Sx(x)*Sy(x)))
+        return x->epsmu(x)*S1S2(x)
+    else
+        S1(x)=diagonal_tensor(VectorValue(1.0/Sx(x),1.0/Sy(x),1.0));
+        S2(x)=diagonal_tensor(VectorValue(Sy(x),Sx(x),Sx(x)*Sy(x)));
+        return x->S1(x)⋅epsmu(x)⋅S2(x)
+    end
 end
 
 
 """
-    add_twist_PML(epsmu::Union{Function,Number},P::Real,r_pml::Real,d_pml::Real,alphaPML::Real)
+    add_twist_PML(epsmu::Union{Number,Function},P::Union{Real,realLength},r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
 
 Function that returns a tensor of permittivity/permeability of a twisted isotropic fiber with a cylindrical PML
 
@@ -551,11 +358,17 @@ Function that returns a tensor of permittivity/permeability of a twisted isotrop
 - d_pml: PML thickness
 - alpha: attenuation factor of the PML
 """
-function add_twist_PML(epsmu::Union{Number,Function},P::Real,r_pml::Real,d_pml::Real,alphaPML::Real)
+function add_twist_PML(epsmu::Union{Number,Function},P::Union{Real,realLength},r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
     Gridap.Helpers.@abstractmethod
 end
 
-function add_twist_PML(epsmu::Function,P::Real,r_pml::Real,d_pml::Real,alphaPML::Real)
+function add_twist_PML(epsmu::Function,P::Union{Real,realLength},r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
+    if !(dimension(P)==dimension(r_pml)==dimension(d_pml))
+        throw(ArgumentError("P, r_pml, d_pml must have the same dimension"));
+    end
+    if length(epsmu(Point(0,0)*unit(r_pml)))!=1
+        throw(ArgumentError("Twisted PML only works with homogeneous media"));
+    end
     alpha=2*pi/P;
     r(x)=hypot(x[1],x[2]);
     Sr(x)=1.0+im*alphaPML*(r(x)-r_pml)^2/(d_pml)^2;
@@ -564,16 +377,22 @@ function add_twist_PML(epsmu::Function,P::Real,r_pml::Real,d_pml::Real,alphaPML:
     C(x)=cos(phi(x));
     S(x)=sin(phi(x));
     S2(x)=sin(2*phi(x));
-    invTxx(x)=(r(x)<r_pml) ? ComplexF64((1.0+alpha^2*x[2]^2)*epsmu(x)) : (C(x)^2/Sr(x)*rp(x)/r(x)+S(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu(x);
-    invTxy(x)=(r(x)<r_pml) ? ComplexF64(-alpha^2*x[1]*x[2]*epsmu(x)) : S2(x)*(rp(x)^2-r(x)^2*(1+alpha^2*rp(x)^2)*Sr(x)^2)/(2*r(x)*rp(x)*Sr(x))*epsmu(x)
-    invTxz(x)=(r(x)<r_pml) ? ComplexF64(-alpha*x[2]*epsmu(x)) : -alpha*rp(x)*Sr(x)*S(x)*epsmu(x)
-    invTyy(x)=(r(x)<r_pml) ? ComplexF64((1.0+alpha^2*x[1]^2)*epsmu(x)) : (S(x)^2/Sr(x)*rp(x)/r(x)+C(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu(x);
-    invTyz(x)=(r(x)<r_pml) ? ComplexF64(alpha*x[1]*epsmu(x)) : alpha*rp(x)*Sr(x)*C(x)*epsmu(x)
-    invTzz(x)=(r(x)<r_pml) ? ComplexF64(epsmu(x)) : rp(x)*Sr(x)/r(x)*epsmu(x)
-    return tensor3(invTxx,invTxy,invTxz,invTxy,invTyy,invTyz,invTxz,invTyz,invTzz);
+    invTxx(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,(1.0+alpha^2*x[2]^2)*epsmu(x))) : (C(x)^2/Sr(x)*rp(x)/r(x)+S(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu(x);
+    invTxy(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,-alpha^2*x[1]*x[2]*epsmu(x))) : S2(x)*(rp(x)^2-r(x)^2*(1+alpha^2*rp(x)^2)*Sr(x)^2)/(2*r(x)*rp(x)*Sr(x))*epsmu(x)
+    invTxz(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,-alpha*x[2]*epsmu(x))) : -alpha*rp(x)*Sr(x)*S(x)*epsmu(x)
+    invTyy(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,(1.0+alpha^2*x[1]^2)*epsmu(x))) : (S(x)^2/Sr(x)*rp(x)/r(x)+C(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu(x);
+    invTyz(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,alpha*x[1]*epsmu(x))) : alpha*rp(x)*Sr(x)*C(x)*epsmu(x)
+    invTzz(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,epsmu(x))) : rp(x)*Sr(x)/r(x)*epsmu(x)
+    return x->TensorValue(invTxx(x),invTxy(x),invTxz(x),invTxy(x),invTyy(x),invTyz(x),invTxz(x),invTyz(x),invTzz(x))
 end
 
-function add_twist_PML(epsmu::Number,P::Real,r_pml::Real,d_pml::Real,alphaPML::Real)
+function add_twist_PML(epsmu::Number,P::Union{Real,realLength},r_pml::Union{Real,realLength},d_pml::Union{Real,realLength},alphaPML::Real)
+    if !(dimension(P)==dimension(r_pml)==dimension(d_pml))
+        throw(ArgumentError("P, r_pml, d_pml must have the same dimension"));
+    end
+    if length(epsmu)!=1
+        throw(ArgumentError("Twisted PML only works with homogeneous media"));
+    end
     alpha=2*pi/P;
     r(x)=hypot(x[1],x[2]);
     Sr(x)=1.0+im*alphaPML*(r(x)-r_pml)^2/(d_pml)^2;
@@ -582,13 +401,13 @@ function add_twist_PML(epsmu::Number,P::Real,r_pml::Real,d_pml::Real,alphaPML::R
     C(x)=cos(phi(x));
     S(x)=sin(phi(x));
     S2(x)=sin(2*phi(x));
-    invTxx(x)=(r(x)<r_pml) ? ComplexF64((1.0+alpha^2*x[2]^2)*epsmu) : (C(x)^2/Sr(x)*rp(x)/r(x)+S(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu;
-    invTxy(x)=(r(x)<r_pml) ? ComplexF64(-alpha^2*x[1]*x[2]*epsmu) : S2(x)*(rp(x)^2-r(x)^2*(1+alpha^2*rp(x)^2)*Sr(x)^2)/(2*r(x)*rp(x)*Sr(x))*epsmu
-    invTxz(x)=(r(x)<r_pml) ? ComplexF64(-alpha*x[2]*epsmu) : -alpha*rp(x)*Sr(x)*S(x)*epsmu
-    invTyy(x)=(r(x)<r_pml) ? ComplexF64((1.0+alpha^2*x[1]^2)*epsmu) : (S(x)^2/Sr(x)*rp(x)/r(x)+C(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu;
-    invTyz(x)=(r(x)<r_pml) ? ComplexF64(alpha*x[1]*epsmu) : alpha*rp(x)*Sr(x)*C(x)*epsmu
+    invTxx(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,(1.0+alpha^2*x[2]^2)*epsmu)) : (C(x)^2/Sr(x)*rp(x)/r(x)+S(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu;
+    invTxy(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,-alpha^2*x[1]*x[2]*epsmu)) : S2(x)*(rp(x)^2-r(x)^2*(1+alpha^2*rp(x)^2)*Sr(x)^2)/(2*r(x)*rp(x)*Sr(x))*epsmu
+    invTxz(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,-alpha*x[2]*epsmu)) : -alpha*rp(x)*Sr(x)*S(x)*epsmu
+    invTyy(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,(1.0+alpha^2*x[1]^2)*epsmu)) : (S(x)^2/Sr(x)*rp(x)/r(x)+C(x)^2*Sr(x)*r(x)/rp(x)*(1+alpha^2*rp(x)^2))*epsmu;
+    invTyz(x)=(r(x)<r_pml) ? ComplexF64(uconvert(NoUnits,alpha*x[1]*epsmu)) : alpha*rp(x)*Sr(x)*C(x)*epsmu
     invTzz(x)=(r(x)<r_pml) ? ComplexF64(epsmu) : rp(x)*Sr(x)/r(x)*epsmu
-    return tensor3(invTxx,invTxy,invTxz,invTxy,invTyy,invTyz,invTxz,invTyz,invTzz);
+    return x->TensorValue(invTxx(x),invTxy(x),invTxz(x),invTxy(x),invTyy(x),invTyz(x),invTxz(x),invTyz(x),invTzz(x))
 end
 
 function get_companion(A0,A1,A2)
@@ -625,6 +444,10 @@ function approx_nFSM_PCF(lambda::Real,D::Real,pitch::Real)
     return sqrt(1.45^2-(V*lambda/(2*pi*aeff))^2);
 end
 
+function approx_nFSM_PCF(lambda::realLength,D::realLength,pitch::realLength)
+    return approx_nFSM_PCF(ustrip(u"m",lambda),ustrip(u"m",D),ustrip(u"m",pitch))
+end
+
 """
     approx_neff_PCF(lambda::Real,D::Real,pitch::Real)
 
@@ -647,6 +470,10 @@ function approx_neff_PCF(lambda::Real,D::Real,pitch::Real)
     return sqrt(nFSM^2+(W*lambda/(2*pi*aeff))^2);
 end
 
+function approx_neff_PCF(lambda::realLength,D::realLength,pitch::realLength)
+    return approx_neff_PCF(ustrip(u"m",lambda),ustrip(u"m",D),ustrip(u"m",pitch))
+end
+
 """
     nb_args(f::Function)
 
@@ -659,28 +486,81 @@ end
 
 ############################# integration #############################
 """
-    integrate1D(f::Function;rtol::Real=1E-5;kwargs...)
+    function_integrate_unitful(f::Function,a::AbstractVector,b::AbstractVector;characteristic_length::AbstractVector=[],kwargs...)
 
-Integrate a 1D function f(r) from 0 to infinity
+Returns the integral ``\\int_{a_1}^{b_1} \\int_{a_2}^{b_2} ... f(x) dx`` where x is a `Point` of dimension length(a) with unit handling. The integration is performed with a change of variable ```x=tan(t)``` and the hcubature function of the Cubature.jl package.
+- a: Vector of the lower bounds of integration
+- b: Vector of the upper bounds of integration
+- characteristic_length: Vector of characteristic lengths to make the integration bounds unitless and significant variations around 1. If not provided, the unit of a is used.
+- kwargs: keyword arguments of the hcubature function (atol, rtol, initdiv, norm)
 
-The keyword arguments are those of HCubature.jl. In particular,`rtol` and `atol` are the relative and the absolute tolerance on the result
 """
-function integrate1D(f::Function;kwargs...)
-    f2=x->f(x[1]/(1-x[1]))/(1-x[1])^2
-    return hcubature(f2,[0.0],[1.0];kwargs...)
+function function_integrate_unitful(f::Function,a::AbstractVector,b::AbstractVector;characteristic_length::AbstractVector=[],kwargs...)
+    if (length(a)!=length(b))
+        throw(ArgumentError("a and b must have the same length"))
+    end
+    ua=unique(unit.(a))
+    ub=unique(unit.(b))
+    if ((length(ua)!=1) || (length(ub)!=1) || (dimension.(ua)!=dimension.(ub)))
+        throw(ArgumentError("All elements of a and b must have the same unit"))
+    end
+    ux=ua[1];
+
+    if !isempty(characteristic_length)
+        if (length(a)!=length(characteristic_length))
+            throw(ArgumentError("a and characteristic_length must have the same length"))
+        end
+        uc=unique(unit.(characteristic_length))
+        if ((length(uc)!=1) || (dimension.(ua)!=dimension.(uc)))
+            throw(ArgumentError("All elements of a and characteristic_length must have the same unit"))
+        end
+    else
+        characteristic_length=ones(length(a))*ux;
+    end
+
+    x=VectorValue(Tuple(0.0*ux for j=1:length(a)))
+    zz=f(x)
+    uf=unit(zz[1])
+    
+    kwargs2=Dict(:norm => x->abs(norm(x)))
+    if haskey(kwargs,:atol)
+        if dimension(kwargs[:atol])!=dimension(uf*ux^length(a))
+            throw(ArgumentError("atol must have the same dimension as the result of integration"))
+        end
+        kwargs_tmp=Dict(:atol=>ustrip(uf,kwargs[:atol]/prod(characteristic_length)))
+        kwargs2=merge(kwargs2,kwargs_tmp)
+    end
+    if haskey(kwargs,:rtol)
+        kwargs_tmp=Dict(:rtol=>kwargs[:rtol])
+        kwargs2=merge(kwargs2,kwargs_tmp)
+    end
+    if haskey(kwargs,:initdiv)
+        kwargs_tmp=Dict(:initdiv=>kwargs[:initdiv])
+        kwargs2=merge(kwargs2,kwargs_tmp)
+    end
+
+    aa=a./characteristic_length;
+    bb=b./characteristic_length;
+    g(x)=ustrip(uf,f(Point(x.data.*characteristic_length)))
+    return uf*prod(characteristic_length)*function_integrate(g,aa,bb;kwargs2...)[1]
 end
 
 """
-    integrate2D(f::Function;kwargs...)
+    function_integrate(f::Function,a::AbstractVector,b::AbstractVector;kwargs...)
 
-Integrate a 2D function f(r) with r is a the tuple (x,y) for x and y from -infinity to infinity
+Returns the integral ``\\int_{a_1}^{b_1} \\int_{a_2}^{b_2} ... f(x) dx`` where x is a unitless `Point`. The integration is performed with a change of variable ```x=tan(t)``` and the hcubature function of the Cubature.jl package.
+- a: Vector of the lower bounds of integration
+- b: Vector of the upper bounds of integration
+- kwargs: keyword arguments of the hcubature function (atol, rtol, initdiv, norm)
 
-    The keyword arguments are those of HCubature.jl. In particular,`rtol` and `atol` are the relative and the absolute tolerance on the result
 """
-function integrate2D(f::Function;kwargs...)
-    f2=x->f(Point(x[1]/(1-x[1]^2),x[2]/(1-x[2]^2)))*(1+x[1]^2)/(1-x[1]^2)^2*(1+x[2]^2)/(1-x[2]^2)^2
-    return hcubature(f2,[-1.0,-1.0],[1.0,1.0];kwargs...)
+function function_integrate(f::Function,a::AbstractVector,b::AbstractVector;kwargs...)
+    aa=atan.(a)
+    bb=atan.(b)
+    g2(x)=f(Point((tan.(x.data))))*prod(1.0.+(tan.(x.data)).^2);
+    return hcubature(g2,aa,bb;kwargs...)
 end
+
 
 """
     compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::Real=1,MeshType::Symbol=:Internal)
@@ -692,21 +572,21 @@ Compute the vectors of a 2D Brillouin zone
 - pitch: Pitch 
 - MeshType: Internal (useful to compute the Density Of States) or :Edge (useful to compute the bandgap edge)
 """
-function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::Real=1,MeshType::Symbol=:Internal)
+function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::Union{Real,realLength}=1,MeshType::Symbol=:Internal)
     if (KNumber<1)
         throw(DomainError(KNumber, "KNumber must be at least 1"));
     end
     if (!(CellType in [:Square,:Hexagon]))
         throw(DomainError(CellType, "CellType must be :Square or :Hexagon"));
     end
-    if (Pitch<=0)
+    if (ustrip(Pitch)<=0)
         throw(DomainError(Pitch, "Pitch must be strictly positive"));
     end
     if (!(MeshType in [:Internal,:Edge]))
         throw(DomainError(MeshType, "MeshType must be :Internal or :Edge"));
     end
-    b1=zeros(2)
-    b2=zeros(2)
+    b1=zeros(2)/unit(Pitch)
+    b2=zeros(2)/unit(Pitch)
     if (CellType==:Square)
         b1[1]=2*pi/Pitch
         b2[2]=2*pi/Pitch
@@ -740,7 +620,7 @@ function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::
                 end
             end
         end
-        kt=[Vector{Float64}(undef,2) for _ in 1:NumberofKT]
+        kt=[Vector{typeof(1.0/Pitch)}(undef,2) for _ in 1:NumberofKT]
         weight=Vector{Float64}(undef,NumberofKT)
         counter=1
         if CellType==:Hexagon
@@ -812,7 +692,7 @@ function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::
             else
                 if Irreducible
                     for i=0:(KNumber-1)
-                        kt[counter][1]=0
+                        kt[counter][1]=0/Pitch
                         kt[counter][2]=i*2*pi/sqrt(3)/(KNumber-1)/Pitch
                         weight[counter]=6
                         if (i==0)
@@ -840,7 +720,7 @@ function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::
                     end
                 else
                     for i=0:KNumber-1
-                        kt[counter][1]=0
+                        kt[counter][1]=0/Pitch
                         kt[counter][2]=i*2*pi/sqrt(3)/(KNumber-1)/Pitch
                         weight[counter]=6
                         if (i==KNumber-1)
@@ -935,7 +815,7 @@ function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::
                 if Irreducible
                     for i=0:(KNumber-1)
                         kt[counter][1]=i*pi/(KNumber-1)/Pitch
-                        kt[counter][2]=0
+                        kt[counter][2]=0/Pitch
                         weight[counter]=4
                         if (i==0)
                             weight[counter]=1
@@ -964,7 +844,7 @@ function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::
                 else
                     for i=0:(KNumber-1)
                         kt[counter][1]=i*pi/(KNumber-1)/Pitch
-                        kt[counter][2]=0
+                        kt[counter][2]=0/Pitch
                         weight[counter]=4
                         if (i==(KNumber-1))
                             weight[counter]=2
@@ -1004,8 +884,6 @@ function compute_kt(KNumber::Int,CellType::Symbol;Irreducible::Bool=true,Pitch::
                 end
             end
         end
-        #println(counter-1)
-        #println(NumberofKT)
         weight=weight/sum(weight)
         return kt,weight
     end

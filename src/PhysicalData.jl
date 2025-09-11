@@ -1,6 +1,7 @@
 module PhysicalData
 
 using StaticArrays
+using Unitful
 
 export n_Ge_Doped_Silica
 export n_F_Doped_Silica
@@ -9,50 +10,79 @@ export n_Germanium
 export Sa_Ytterbium
 export Se_Ytterbium
 
-#Constants from CODATA2018
 """
     c=299792458.0
 
-Velocity of light in vacuum (m/s)
+Velocity of light in vacuum (in m/s)
 """
 const c=299792458.0;
+
+"""
+    c_Unitful=299792458.0*u"m/s"
+
+Velocity of light in vacuum
+"""
+const c_Unitful=c*u"m/s"
 """
     mu0=1.25663706212e-6
 
-Vaccum permeability (H/m)
+Vacuum permeability (in H/m)
 """
 const mu0=4E-7*pi;
 """
+    mu0_Unitful=1.25663706212e-6*u"H/m"
+
+Vacuum permeability
+"""
+const mu0_Unitful=mu0*u"H/m"
+"""
     eps0=1/(mu0*c^2)
 
-Vaccum permittivity (F/m)
+Vacuum permittivity (in F/m)
 """
 const eps0=1.0/(mu0*c^2);
 """
+    eps0_Unitful=1/(mu0_Unitful*c_Unitful^2)
+
+Vacuum permittivity
+"""
+const eps0_Unitful=eps0*u"F/m"
+"""
     h=6.62607015e-34
 
-Planck constant (J.s)
+Planck constant (in J.s)
 """
 const h=6.626_070_15e-34;
 """
+    h_Unitful=6.62607015e-34*u"J*s"
+
+Planck constant
+"""
+const h_Unitful=h*u"J*s"
+"""
     Z0=sqrt(mu0/eps0)
 
-Vaccum impedance (Ω)
+Vaccum impedance (in Ω)
 """
 const Z0=mu0*c;
+"""
+    Z0_Unitful=sqrt(mu0_Unitful/eps0_Unitful)
+
+Vaccum impedance
+"""
+const Z0_Unitful=Z0*u"Ω"
 
 #Refractive index functions
 
 """
-    n_Ge_Doped_Silica(lambda::Real,xGe::Real;author::Symbol=:Fleming)
+    n_Ge_Doped_Silica(lambda::Union{Real,Quantity{<:Real,Unitful.𝐋}},xGe::Real;author::Symbol=:Fleming)
  
-If author==:Fleming, returns the refractive index of Germanium-doped Silica [Fleming1984](@cite)  
-- lambda: Wavelength (m) - Domain of validity: 360 nm ≤ lambda ≤ 4300 nm
-- xGe: Germanium Fraction (0 ≤ xGe ≤ 1)  
+Returns the refractive index of germanium-doped silica with a germanium fraction `xGe` (0 ≤ xGe ≤ 1) at the wavelength `lambda` (in meters if `lambda` is a `Real`).
+Two Sellmeier formulas can be used : `author=:Fleming` [Fleming1984](@cite) and `author=:Sunak` [Sunak1989](@cite).
 
-If author==:Sunak, returns the refractive index of Germanium-doped Silica [Sunak1989](@cite)  
-- lambda: Wavelength (m) - Domain of validity: 600 nm ≤ lambda ≤ 1800 nm
-- xGe: Germanium Fraction (0 ≤ x Ge ≤ 1) - Domain of validity: xGe ≤ 0.2
+Domain of validity:
+- 360 nm ≤`lambda`≤ 4300 nm for Fleming's formula
+- 600 nm ≤`lambda`≤ 1800 nm and `xGe` ≤ 0.2 for Sunak's formula
 """
 function n_Ge_Doped_Silica(lambda::Real,xGe::Real;author::Symbol=:Fleming)
     if (author==:Fleming)
@@ -77,13 +107,16 @@ function n_Ge_Doped_Silica(lambda::Real,xGe::Real;author::Symbol=:Fleming)
     end
 end
 
+function n_Ge_Doped_Silica(lambda::Unitful.Quantity{<:Real,Unitful.𝐋},xGe::Real;author::Symbol=:Fleming)
+    return n_Ge_Doped_Silica(ustrip(u"m",lambda),xGe;author=author)
+end
+
 """
-    n_F_Doped_Silica(lambda::Real,xF::Real)
+    n_F_Doped_Silica(lambda::Union{Real,Quantity{<:Real,Unitful.𝐋}},xF::Real)
 
-Returns the refractive index of Fluorine-doped Silica [Sunak1989](@cite)  
+Returns the refractive index of fluorine-doped silica with a fluorine fraction `xF` (0 ≤ xGe ≤ 1) at the wavelength `lambda` (in meters if `lambda` is a `Real`) [Sunak1989](@cite).
 
-- lambda: Wavelength (m) - Domain of validity: 600 nm ≤ lambda ≤ 1800 nm
-- xF: Fluorine Fraction (0 ≤ x Ge ≤ 1) - Domain of validity: xF ≤ 0.02
+Domain of validity: 600 nm ≤`lambda`≤ 1800 nm and `xF` ≤ 0.2
 """
 function n_F_Doped_Silica(lambda::Real,xF::Real)
     ASi=[0.2045154578,0.06451676258,0.1311583151];
@@ -96,13 +129,16 @@ function n_F_Doped_Silica(lambda::Real,xF::Real)
     return sqrt((2*result+1)/(1-result));
 end
 
+function n_F_Doped_Silica(lambda::Unitful.Quantity{<:Real,Unitful.𝐋},xF::Real)
+    return n_F_Doped_Silica(ustrip(u"m",lambda),xF)
+end
+
 """
-    n_Silicon(lambda::Real,T::Real)
+    n_Silicon(lambda::Union{Real,Quantity{<:Real,Unitful.𝐋}},T::Union{Real,Quantity{<:Real,Unitful.𝚯}})
 
-Returns the refractive index of Silicon [Frey2006](@cite)  
+Returns the refractive index of Silicon at wavelength `lambda` (in meters if `lambda` is a `Real`) and at temperature `T` (in Kelvin if `T` is a `Real`) [Frey2006](@cite)  
 
-- lambda: Wavelength (m) - Domain of validity: 1100 nm ≤ lambda ≤ 5600 nm
-- T: Temperature (K) - Domain of validity: 20 K ≤ T ≤ 300 K
+Domain of validity: 1100 nm ≤ `lambda` ≤ 5600 nm and 20 K ≤ `T` ≤ 300 K
 """
 function n_Silicon(lambda::Real,T::Real)
     S1_coef=[10.4907,-2.08020E-4,4.21694E-6,-5.82298E-9,3.44688E-12];
@@ -121,13 +157,16 @@ function n_Silicon(lambda::Real,T::Real)
     return sqrt(1+S1*(lambda*1e6)^2/((lambda*1e6)^2-lambda1^2)+S2*(lambda*1e6)^2/((lambda*1e6)^2-lambda2^2)+S3*(lambda*1e6)^2/((lambda*1e6)^2-lambda3^2));
 end
 
+function n_Silicon(lambda::Unitful.Quantity{<:Real,Unitful.𝐋},T::Unitful.Quantity{<:Real,Unitful.𝚯})
+    return n_Silicon(ustrip(u"m",lambda),ustrip(u"K",T))
+end
+
 """
     n_Germanium(lambda::Real,T::Real)
 
-Returns the refractive index of Germanium [Frey2006](@cite)  
+Returns the refractive index of Germanium at wavelength `lambda` (in meters if `lambda` is a `Real`) and at temperature `T` (in Kelvin if `T` is a `Real`) [Frey2006](@cite)  
 
-- lambda: Wavelength (m) - Domain of validity: 1900 nm ≤ lambda ≤ 5500 nm
-- T: Temperature (K) - Domain of validity: 20 K ≤ T ≤ 300 K
+Domain of validity: 1900 nm ≤ `lambda` ≤ 5500 nm and 20 K ≤ `T` ≤ 300 K
 
 """
 function n_Germanium(lambda::Real,T::Real)
@@ -147,12 +186,15 @@ function n_Germanium(lambda::Real,T::Real)
     return sqrt(1+S1*(1lambda*1e6)^2/((lambda*1e6)^2-lambda1^2)+S2*(lambda*1e6)^2/((lambda*1e6)^2-lambda2^2)+S3*(lambda*1e6)^2/((lambda*1e6)^2-lambda3^2));
 end
 
+function n_Germanium(lambda::Unitful.Quantity{<:Real,Unitful.𝐋},T::Unitful.Quantity{<:Real,Unitful.𝚯})
+    return n_Germanium(ustrip(u"m",lambda),ustrip(u"K",T))
+end
+
+
 """
-    Sa_Ytterbium(lambda::Real)
+    Sa_Ytterbium(lambda::Union{Real,Quantity{<:Real,Unitful.𝐋}})
 
-Returns the absorption cross section (in m²) of ytterbium [Marciante2006](@cite)  
-
-- lambda: Wavelength (m)
+Returns the absorption cross section (in m²) of ytterbium at wavelength `lambda` (in meters if `lambda` is a `Real`) [Marciante2006](@cite)  
 """
 function Sa_Ytterbium(lambda::Real)
     A=[180.0,360.0,510.0,160.0,2325.0]*1E-27;
@@ -165,13 +207,17 @@ function Sa_Ytterbium(lambda::Real)
     return Sa;
 end 
 
+function Sa_Ytterbium(lambda::Unitful.Quantity{<:Real,Unitful.𝐋})
+    return Sa_Ytterbium(ustrip(u"m",lambda))*u"m^2"
+end
+
 """
     Se_Ytterbium(lambda::Real)
 
-Returns the emission cross section (in m²) of ytterbium [Marciante2006](@cite)  
-
-- lambda: Wavelength (m)
+Returns the emission cross section (in m²) of ytterbium at wavelength `lambda` (in meters if `lambda` is a `Real`) [Marciante2006](@cite)  
 """
+
+
 function Se_Ytterbium(lambda::Real)
     A=[2325.0,160.0,340.0,175.0,150.0]*1E-27;
     l=[975.0,978.0,1025.0,1050.0,1030.0]*1E-9;
@@ -183,4 +229,11 @@ function Se_Ytterbium(lambda::Real)
     return Se;
 end 
 
-end # module PhysicalData
+function Se_Ytterbium(lambda::Unitful.Quantity{<:Real,Unitful.𝐋})
+    return Se_Ytterbium(ustrip(u"m",lambda))*u"m^2"
+end
+
+end
+
+
+# module PhysicalData

@@ -1,82 +1,27 @@
 """
-    FEM2D(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Scalar)
-
-Returns a vector of `Mode{ScalarFieldFEM2D}` if type=:Scalar or a vector of `Mode{VectorFieldFEM2D}` if type=:Vector.  
-The fiber is assumed to be isotropic and is described with its relative permittivity.
-
-- lambda: wavelength
-- eps_fonc: function of the tuple (x,y) that describes the relative permittivity profile i.e. eps(x)=n(x)^2
-- model: DiscreteModel generated with `GridapGmsh.jl`
-- neigs: number of modes to compute
-- approx_neff: effective index around which the modes will be computed
-- order: order of the FEM
-- field: boolean that indicates if fields must be saved
-- solver: can be :LU or :MUMPS
-- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
-- verbose: boolean that enables some outputs
-- dPML: Thickness of the PML
-- alphaPML: attenuation coefficient of the PML
-- boundary_tag: tag of the boundary in model. If "", then the function automatically detects the boundary.
-- type: :Scalar or :Vector
-"""
-function FEM2D(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Scalar)
-    if (lambda<=0)
-        throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
-    end
-    if (first(methods(eps_fonc)).nargs!=2)
-        throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
-    end
-    if (num_dims(model)!=2)
-        throw(DomainError(model, "The model must be 2D"));
-    end
-    if (neigs<=0)
-        throw(DomainError(neigs, "The number of modes must be strictly positive"));
-    end
-    if (order<1)
-        throw(DomainError(order, "The order must be at least 1"));
-    end
-    if (!(type in [:Scalar,:Vector]))
-        throw(DomainError(solver, "solver must be :Scalar or :Vector"));
-    end
-    if (!(solver in [:LU,:MUMPS]))
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
-    end
-    if (tol<0)
-        throw(DomainError(tol, "The tolerance must be positive or null"));
-    end
-    if (type==:Scalar)
-        FEM2D_scalar(lambda,eps_fonc,model;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag)
-    else
-        if (dPML<=0)
-            FEM2D_vector_guided(lambda,eps_fonc,model;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
-        else
-            FEM2D_vector_leaky(lambda,eps_fonc,model;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag)
-        end
-    end
-end
-
-"""
-    FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10)
+    FEM1D(lambda::realLength,nu::Int64,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10)
 
 Returns a vector of `Mode{ScalarFieldFEM1D}`.  
 The fiber is assumed to be isotropic with a cylindrical symmetry and is described with its relative permittivity.
 
 - lambda: wavelength
 - nu: azimuthal number
-- eps_fonc: function of r that describes the relative permittivity profile i.e. eps(r)=n(r)^2
-- model: DiscreteModel generated with `GridapGmsh.jl`
+- n_fonc: function of r that describes the refractive index profile n(r)
+- model: DiscreteModel generated with `GridapGmsh.jl` with a unit
 - neigs: number of modes to compute
 - approx_neff: effective index around which the modes will be computed
 - order: order of the FEM
 - field: boolean that indicates if fields must be saved
-- solver: can be :LU or :MUMPS
+- solver: can be :LU, :MUMPS or :CUDSS
 - tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
 - verbose: boolean that enables some outputs
 - dPML: Thickness of the PML
 - alphaPML: attenuation coefficient of the PML
 """
-function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10)
-    if (lambda<=0)
+function FEM1D(lambda::realLength,nu::Int64,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10)
+    model=um.model
+    PositionUnit=um.unit
+    if (lambda<=0u"m")
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
     if (nu<0)
@@ -85,10 +30,10 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
     if (neigs<=0)
         throw(DomainError(neigs, "The number of modes must be strictly positive"));
     end
-    if (first(methods(eps_fonc)).nargs!=2)
-        throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
+    if (2 ∉ getproperty.(methods(n_fonc),:nargs))
+        throw(DomainError(n_fonc, "The refractive index function must have 1 argument"));
     end
-    if (num_dims(model)!=1)
+    if (num_point_dims(model)!=1)
         throw(DomainError(model, "The model must be 1D"));
     end
     if (approx_neff<0)
@@ -97,12 +42,16 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
     if (order<1)
         throw(DomainError(order, "The order must be at least 1"));
     end
-    if (!(solver in [:LU,:MUMPS]))
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or:CUDSS"));
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
     end
+    lambda_ini=lambda
+    lambda=ustrip(PositionUnit,lambda)
+    dPML=ustrip(PositionUnit,dPML)
+    eps_fonc=x->(n_fonc(VectorValue(x[1]*PositionUnit)))^2
 
     boundary=Gridap.Geometry.compute_isboundary_face(model.grid_topology,0);
     if (sum(boundary)!=2)
@@ -113,8 +62,8 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
     (rmin,posmin)=findmin(r);
     (rmax,posmax)=findmax(r);
     if (verbose)
-        println("Find rmin = ",rmin)
-        println("Find rmax = ",rmax)
+        println("Find rmin = ",rmin*PositionUnit)
+        println("Find rmax = ",rmax*PositionUnit)
     end
     if (rmin!=0)
         throw(DomainError(model, "The geometry must begin at the origin"));
@@ -170,7 +119,7 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
             println("Boundary tags '",label_start,"' and '",label_end,"' created.")
         end
     end
-
+    
     nend=sqrt(eps_fonc(rmax));
     if (verbose)
         println("Cladding refractive index = ",nend)
@@ -221,8 +170,10 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
     end
     if (solver==:LU)
         tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
-    else
+    elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+    else
+        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
     end
     neff=sqrt.(tmp1/k2);
     if (verbose)
@@ -234,12 +185,12 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
     if (dPML<=0)
         nb_mode=1;
         if (field)
-            sol=Vector{Mode{ScalarFieldFEM1D}}(undef,0);
+            sol=Vector{Mode{ScalarFiberEMField1D}}(undef,0);
             E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
             for i in axes(neff,1)
                 if (neff[i]>nend) #Guided mode only
                     name=string("Mode LP n°",string(nb_mode));
-                    push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM1D(nu,dΩ,E[i])));
+                    push!(sol,Mode(name,neff[i],lambda_ini,ScalarFiberEMField1D(nu,FEMField(E[i],dΩ,PositionUnit,u"V/m"))));
                     nb_mode=nb_mode+1;
                 end
             end
@@ -248,28 +199,53 @@ function FEM1D(lambda::Real,nu::Int64,eps_fonc::Function,model::DiscreteModel;ap
             for i in axes(neff,1)
                 if (neff[i]>nend)
                     name=string("Mode LP n°",string(nb_mode));
-                    push!(sol,Mode(name,neff[i],lambda));
+                    push!(sol,Mode(name,neff[i],lambda_ini));
                     nb_mode=nb_mode+1;
                 end
             end
         end
     else
         if (field)
-            sol=Vector{Mode{ScalarFieldFEM1D}}(undef,0);
+            sol=Vector{Mode{ScalarFiberEMField1D}}(undef,0);
             E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
             for i in axes(neff,1)
                 name=string("Mode LP n°",string(i));
-                push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM1D(nu,dΩ,E[i])));
+                push!(sol,Mode(name,neff[i],lambda_ini,ScalarFiberEMField1D(nu,FEMField(E[i],dΩ,PositionUnit,u"V/m"))));
             end
         else
             sol=Vector{Mode{Nothing}}(undef,0);
             for i in axes(neff,1)
                 name=string("Mode LP n°",string(i));
-                push!(sol,Mode(name,neff[i],lambda));
+                push!(sol,Mode(name,neff[i],lambda_ini));
             end
         end
     end
     return sol;
+end
+
+"""
+    FEM1D(lambda::Real,nu::Int64,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10)
+
+Returns a vector of `Mode{ScalarFieldFEM1D}`.  
+The fiber is assumed to be isotropic with a cylindrical symmetry and is described with its relative permittivity.
+
+- lambda: wavelength (m)
+- nu: azimuthal number
+- n_fonc: function of r that describes the refractive index profile n(r)
+- model: DiscreteModel generated with `GridapGmsh.jl` (m)
+- neigs: number of modes to compute
+- approx_neff: effective index around which the modes will be computed
+- order: order of the FEM
+- field: boolean that indicates if fields must be saved
+- solver: can be :LU, :MUMPS or :CUDSS
+- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
+- verbose: boolean that enables some outputs
+- dPML: Thickness of the PML (m)
+- alphaPML: attenuation coefficient of the PML
+"""
+function FEM1D(lambda::Real,nu::Int64,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10)
+    n_fonc2=x->n_fonc(VectorValue(ustrip(u"m",x[1])))
+    FEM1D(lambda*u"m",nu,n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML*u"m",alphaPML=alphaPML)
 end
 
 function create_model_with_boundary(model::DiscreteModel;verbose::Bool=false)
@@ -351,15 +327,103 @@ function detect_boundaries(model::DiscreteModel;verbose::Bool=false)
     return boundaries
 end
 
-function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="")
-    if (lambda<=0)
+"""
+    FEM2D(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Scalar,twistPitch::realLength=Inf*u"m")
+
+Returns a vector of `Mode{ScalarFieldFEM2D}` if type=:Scalar or a vector of `Mode{VectorFieldFEM2D}` if type=:Vector.  
+The fiber is assumed to be isotropic and is described with its relative permittivity.
+
+- lambda: wavelength
+- n_fonc: function of the tuple (x,y) that describes the refractive index profile n(x)
+- model: DiscreteModel generated with `GridapGmsh.jl` with an unit
+- neigs: number of modes to compute
+- approx_neff: effective index around which the modes will be computed
+- order: order of the FEM
+- field: boolean that indicates if fields must be saved
+- solver: can be :LU, :MUMPS or :CUDSS
+- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
+- verbose: boolean that enables some outputs
+- dPML: Thickness of the PML
+- alphaPML: attenuation coefficient of the PML
+- boundary_tag: tag of the boundary in model. If "", then the function automatically detects the boundary.
+- type: :Scalar or :Vector
+- twistPitch: twist pitch of the fiber. If Inf*u"m", the fiber is untwisted. Works for vector modes only.
+"""
+function FEM2D(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Scalar,twistPitch::realLength=Inf*u"m")
+    if (lambda<=0u"m")
+        throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
+    end
+    if (2 ∉ getproperty.(methods(n_fonc),:nargs))
+        throw(DomainError(n_fonc, "The refractive index function must have 1 argument"));
+    end
+    if (num_dims(um.model)!=2)
+        throw(DomainError(model, "The model must be 2D"));
+    end
+    if (neigs<=0)
+        throw(DomainError(neigs, "The number of modes must be strictly positive"));
+    end
+    if (order<1)
+        throw(DomainError(order, "The order must be at least 1"));
+    end
+    if (!(type in [:Scalar,:Vector]))
+        throw(DomainError(solver, "solver must be :Scalar or :Vector"));
+    end
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
+    end
+    if (tol<0)
+        throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    eps_fonc=x->(n_fonc(x))^2
+    if (type==:Scalar)
+        FEM2D_scalar(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag)
+    else
+        if ((dPML<=0u"m") && isinf(twistPitch))
+            FEM2D_vector_guided(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
+        else
+            FEM2D_vector_leaky(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag,twistPitch=twistPitch)
+        end
+    end
+end
+
+"""
+    FEM2D(lambda::Real,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Vector,twistPitch::Real=Inf)
+
+Returns a vector of `Mode{ScalarFieldFEM2D}` if type=:Scalar or a vector of `Mode{VectorFieldFEM2D}` if type=:Vector.  
+The fiber is assumed to be isotropic and is described with its relative permittivity.
+
+- lambda: wavelength (m)
+- n_fonc: function of the tuple (x,y) that describes the refractive index profile n(x)
+- model: DiscreteModel generated with `GridapGmsh.jl` (m)
+- neigs: number of modes to compute
+- approx_neff: effective index around which the modes will be computed
+- order: order of the FEM
+- field: boolean that indicates if fields must be saved
+- solver: can be :LU, :MUMPS or :CUDSS
+- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
+- verbose: boolean that enables some outputs
+- dPML: Thickness of the PML (m)
+- alphaPML: attenuation coefficient of the PML
+- boundary_tag: tag of the boundary in model. If "", then the function automatically detects the boundary.
+- type: :Scalar or :Vector
+- twistPitch: twist pitch of the fiber (m). If Inf*u"m", the fiber is untwisted. Works for vector modes only.
+"""
+function FEM2D(lambda::Real,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Vector,twistPitch::Real=Inf)
+    n_fonc2=x->n_fonc(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
+    FEM2D(lambda*u"m",n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML*u"m",alphaPML=alphaPML,boundary_tag=boundary_tag,type=type,twistPitch=twistPitch*u"m")
+end
+
+function FEM2D_scalar(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="")
+    model=um.model
+    PositionUnit=um.unit
+    if (lambda<=0u"m")
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
     if (neigs<=0)
         throw(DomainError(neigs, "The number of modes must be strictly positive"));
     end
-    if (first(methods(eps_fonc)).nargs!=2)
-        throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
+    if (2 ∉ getproperty.(methods(eps_fonc_ini),:nargs))
+        throw(DomainError(eps_fonc_ini, "The permittivity function must have 1 argument"));
     end
     if (num_dims(model)!=2)
         throw(DomainError(model, "The model must be 2D"));
@@ -370,8 +434,8 @@ function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;appro
     if (order<1)
         throw(DomainError(order, "The order must be at least 1"));
     end
-    if (!(solver in [:LU,:MUMPS]))
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS, :CUDSS"));
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
@@ -382,6 +446,11 @@ function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;appro
     else
         model2=model
     end
+
+    lambda_ini=lambda
+    lambda=ustrip(PositionUnit,lambda)
+    dPML=ustrip(PositionUnit,dPML)
+    eps_fonc=x->eps_fonc_ini(VectorValue((x[1]*PositionUnit,x[2]*PositionUnit)))
 
     if (dPML>0)
         boundaries=detect_boundaries(model2,verbose=verbose)
@@ -493,8 +562,10 @@ function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;appro
     end
     if (solver==:LU)
         tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
-    else
+    elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+    else
+        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
     end
     neff=sqrt.(tmp1/k2);
     if (verbose)
@@ -506,12 +577,12 @@ function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;appro
     if (dPML<=0)
         nb_mode=1
         if (field)
-            sol=Vector{Mode{ScalarFieldFEM2D}}(undef,0);
+            sol=Vector{Mode{ScalarFiberEMField2D}}(undef,0);
             E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
             for i in axes(neff,1)
                 if (neff[i]>nend) #Guided mode only
                     name=string("Mode LP n°",string(nb_mode));
-                    push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM2D(dΩ,E[i])));
+                    push!(sol,Mode(name,neff[i],lambda_ini,ScalarFiberEMField2D(FEMField(E[i],dΩ,PositionUnit,u"V/m"))));
                     nb_mode=nb_mode+1;
                 end
             end
@@ -520,42 +591,43 @@ function FEM2D_scalar(lambda::Real,eps_fonc::Function,model::DiscreteModel;appro
             for i in axes(neff,1)
                 if (neff[i]>nend) #Guided mode only
                     name=string("Mode LP n°",string(nb_mode));
-                    push!(sol,Mode(name,neff[i],lambda));
+                    push!(sol,Mode(name,neff[i],lambda_ini));
                     nb_mode=nb_mode+1;
                 end
             end
         end
     else
         if (field)
-            sol=Vector{Mode{ScalarFieldFEM2D}}(undef,0);
+            sol=Vector{Mode{ScalarFiberEMField2D}}(undef,0);
             E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
             for i in axes(neff,1)
                 name=string("Mode LP n°",string(i));
-                push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM2D(dΩ,E[i])));
+                push!(sol,Mode(name,neff[i],lambda_ini,ScalarFiberEMField2D(FEMField(E[i],dΩ,PositionUnit,u"V/m"))));
             end
         else
             sol=Vector{Mode{Nothing}}(undef,0);
             for i in axes(neff,1)
                 name=string("Mode LP n°",string(i));
-                push!(sol,Mode(name,neff[i],lambda));
+                push!(sol,Mode(name,neff[i],lambda_ini));
             end
         end
     end
     return sol;
 end
 
-function computeDz(Et,Ez,epsi::tensor3)
-    ep(x)=VectorValue(epsi.zx(x),epsi.zy(x));
-    return eps0*(ep⋅Et+epsi.zz.f*Ez)
+function computeDz(Et,Ez,epsi::Function)
+    ep(x)=VectorValue(getindex(epsi(x),3,1),getindex(epsi(x),3,2));
+    epsizz(x)=getindex(epsi(x),3,3)
+    return eps0*(ep⋅Et+epsizz*Ez)
 end
 
-function computeDt(Et,Ez,epsi::tensor3)
-    eps1(x)=TensorValue(epsi.xx(x),epsi.yx(x),epsi.xy(x),epsi.yy(x));
-    eps2(x)=VectorValue(epsi.xz(x),epsi.yz(x));
+function computeDt(Et,Ez,epsi::Function)
+    eps1(x)=TensorValue(getindex(epsi(x),1,1),getindex(epsi(x),2,1),getindex(epsi(x),1,2),getindex(epsi(x),2,2));
+    eps2(x)=VectorValue(getindex(epsi(x),1,3),getindex(epsi(x),2,3));
     return eps0*(eps1⋅Et+eps2*Ez)
 end
 
-function computeD(Et,Ez,epsi::tensor3)
+function computeD(Et,Ez,epsi::Function)
     return computeDt(Et,Ez,epsi),computeDz(Et,Ez,epsi);
 end
 
@@ -579,23 +651,31 @@ function computeB2(Et,Ez,lambda::Real,neff)
     return Bt,Bz;
 end
 
-function computeH(Bt,Bz,invmu::tensor3)
-    invmu1(x)=TensorValue(invmu.xx(x),invmu.yx(x),invmu.xy(x),invmu.yy(x));
-    invmu2(x)=VectorValue(invmu.xz(x),invmu.yz(x));
-    invmu3(x)=VectorValue(invmu.zx(x),invmu.zy(x));
-    return (invmu1⋅Bt+invmu2*Bz)*1/mu0,(invmu3⋅Bt+invmu.zz.f*Bz)*1/mu0
+function computeH(Bt,Bz,mu::Function)
+    invmu1(x)=TensorValue(getindex(inv(mu(x)),1,1),getindex(inv(mu(x)),2,1),getindex(inv(mu(x)),1,2),getindex(inv(mu(x)),2,2));
+    invmu2(x)=VectorValue(getindex(inv(mu(x)),1,3),getindex(inv(mu(x)),2,3));
+    invmu3(x)=VectorValue(getindex(inv(mu(x)),3,1),getindex(inv(mu(x)),3,2));
+    invmu_zz(x)=getindex(inv(mu(x)),3,3)
+    return (invmu1⋅Bt+invmu2*Bz)/mu0,(invmu3⋅Bt+invmu_zz*Bz)/mu0
+end
+
+#case mu=1
+function computeH(Bt,Bz)
+    return Bt/mu0,Bz/mu0
 end
 
 
-function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,boundary_tag::String="")
-    if (lambda<=0)
+function FEM2D_vector_guided(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,boundary_tag::String="")
+    model=um.model
+    PositionUnit=um.unit
+    if (lambda<=0u"m")
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
     if (neigs<=0)
         throw(DomainError(nb, "The number of modes must be strictly positive"));
     end
-    if (first(methods(eps_fonc)).nargs!=2)
-        throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
+    if (2 ∉ getproperty.(methods(eps_fonc_ini),:nargs))
+        throw(DomainError(eps_fonc_ini, "The permittivity function must have 1 argument"));
     end
     if (num_dims(model)!=2)
         throw(DomainError(model, "The model must be 2D"));
@@ -606,8 +686,8 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     if (order<1)
         throw(DomainError(order, "The order must be at least 1"));
     end
-    if (!(solver in [:LU,:MUMPS]))
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
@@ -618,7 +698,11 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     else
         model2=model
     end
-        
+    
+    lambda_ini=lambda
+    lambda=ustrip(PositionUnit,lambda)
+    eps_fonc=x->eps_fonc_ini(VectorValue((x[1]*PositionUnit,x[2]*PositionUnit)))
+
     boundary_0D=Gridap.Geometry.compute_isboundary_face(model2.grid_topology,0);
     pos_boundary_0D=findall(boundary_0D);
     coord=Gridap.ReferenceFEs.get_node_coordinates(model2.grid)
@@ -658,8 +742,10 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     end
     if (solver==:LU)
         tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
-    else
+    elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+    else
+        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
     end
     neff=sqrt.(tmp1/k2);
     if (verbose)
@@ -668,20 +754,17 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     end
     nb_mode=1
     if (field)
-        sol=Vector{Mode{VectorFieldFEM2D}}(undef,0);
+        sol=Vector{Mode{VectorFiberEMField}}(undef,0);
         for i in axes(neff,1)
             if (real(neff[i])>nend) #Guided mode only
                 name=string("Mode ",string(nb_mode));
                 Et,Ez=FEFunction(U,tmp2[:,i])
-                ux=VectorValue(1.0,0.0);
-                uy=VectorValue(0.0,1.0);
-                Ex=Et⋅ux;
-                Ey=Et⋅uy;
+                T=TensorValue([1 0 ; 0 1 ; 0 0])
+                E=T⋅Et+Ez*VectorValue(0,0,im*2.0*pi*neff[i]/lambda)
                 Bt,Bz=computeB2(Et,Ez,lambda,neff[i]);
-                Ht,Hz=computeH(Bt,Bz,tensor3(1));
-                Hx=Ht⋅ux;
-                Hy=Ht⋅uy;
-                push!(sol,Mode(name,neff[i],lambda,VectorFieldFEM2D(dΩ,Ex,Ey,Ez*im*2.0*pi*neff[i]/lambda,Hx,Hy,Hz)));
+                Ht,Hz=computeH(Bt,Bz);
+                H=T⋅Ht+Hz*VectorValue(0,0,1)
+                push!(sol,Mode(name,neff[i],lambda_ini,VectorFiberEMField(FEMField(E,dΩ,PositionUnit,u"V/m"),FEMField(H,dΩ,PositionUnit,u"A/m"))));
                 nb_mode=nb_mode+1
             end
         end
@@ -690,7 +773,7 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
         for i in axes(neff,1)
             if (neff[i]>nend) #Guided mode only
                 name=string("Mode ",string(nb_mode));
-                push!(sol,Mode(name,neff[i],lambda));
+                push!(sol,Mode(name,neff[i],lambda_ini));
                 nb_mode=nb_mode+1
             end
         end
@@ -698,14 +781,16 @@ function FEM2D_vector_guided(lambda::Real,eps_fonc::Function,model::DiscreteMode
     return sol;
 end
 
-function FEM2D_vector_leaky(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="")
-    if (lambda<=0)
+function FEM2D_vector_leaky(lambda::realLength,eps_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",twistPitch::realLength=Inf*u"m")
+    model=um.model
+    PositionUnit=um.unit
+    if (lambda<=0u"m")
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
     if (neigs<=0)
         throw(DomainError(nb, "The number of modes must be strictly positive"));
     end
-    if (first(methods(eps_fonc)).nargs!=2)
+    if (2 ∉ getproperty.(methods(eps_fonc),:nargs))
         throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
     end
     if (num_dims(model)!=2)
@@ -717,13 +802,15 @@ function FEM2D_vector_leaky(lambda::Real,eps_fonc::Function,model::DiscreteModel
     if (order<1)
         throw(DomainError(order, "The order must be at least 1"));
     end
-    if (!(solver in [:LU,:MUMPS]))
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
     end
-
+    if (twistPitch<=0u"m")
+        throw(DomainError(twistPitch, "The twist pitch must be positive"));
+    end
     
     if (isempty(boundary_tag))
         boundary_tag,model2=create_model_with_boundary(model,verbose=verbose)
@@ -731,42 +818,51 @@ function FEM2D_vector_leaky(lambda::Real,eps_fonc::Function,model::DiscreteModel
         model2=model
     end
         
-    if (dPML>0)
+    if (dPML>0u"m")
         boundaries=detect_boundaries(model2,verbose=verbose)
         if (length(boundaries)==1)
             circular=true
-            R=boundaries
+            R=boundaries*PositionUnit
         else
             circular=false
-            x_boundary_min=boundaries[1]
-            x_boundary_max=boundaries[2]
-            y_boundary_min=boundaries[3]
-            y_boundary_max=boundaries[4]
+            x_boundary_min=boundaries[1]*PositionUnit
+            x_boundary_max=boundaries[2]*PositionUnit
+            y_boundary_min=boundaries[3]*PositionUnit
+            y_boundary_max=boundaries[4]*PositionUnit
         end
     end
 
-    coord=Gridap.ReferenceFEs.get_node_coordinates(model2.grid)
-    if (verbose)
-        println("Cladding refractive index = ",nend)
+    if ((!isinf(twistPitch)) && (!circular))
+        throw(DomainError(twistPitch, "Twist requires circular boundaries"));
     end
+
+    eps_fonc2=x->eps_fonc(x*PositionUnit)
+
+    coord=Gridap.ReferenceFEs.get_node_coordinates(model2.grid)
+   
     if (approx_neff<=0)
-        approx_neff=maximum(sqrt.(eps_fonc.(coord)))
+        approx_neff=maximum(sqrt.(eps_fonc2.(coord)))
         if (verbose)
             println("Set approx_neff to ",approx_neff)
         end
     end
 
     if (circular)
-        epsilon_tensor=add_cylindrical_PML(eps_fonc,R-dPML,dPML,alphaPML);
-        mu_tensor=add_cylindrical_PML(x->1.0,R-dPML,dPML,alphaPML);
+        if isinf(twistPitch)
+            epsilon_tensor=add_cylindrical_PML(x->eps_fonc(x),Float64(R-dPML),Float64(dPML),alphaPML);
+            mu_tensor=add_cylindrical_PML(1.0,Float64(R-dPML),Float64(dPML),alphaPML);
+        else
+            epsilon_tensor=add_twist_PML(x->eps_fonc(x),twistPitch,R-dPML,dPML,alphaPML);
+            mu_tensor=add_twist_PML(1.0,twistPitch,R-dPML,dPML,alphaPML);
+        end
     else
-        epsilon_tensor=add_rectangular_PML(eps_fonc,x_boundary_min+dPML,x_boundary_max-dPML,dPML,y_boundary_min+dPML,y_boundary_max-dPML,dPML,alphaPML);
-        mu_tensor=add_rectangular_PML(x->1.0,x_boundary_min+dPML,x_boundary_max-dPML,dPML,y_boundary_min+dPML,y_boundary_max-dPML,dPML,alphaPML);
+        epsilon_tensor=add_rectangular_PML(x->eps_fonc(x),Float64(x_boundary_min+dPML),Float64(x_boundary_max-dPML),Float64(dPML),Float64(y_boundary_min+dPML),Float64(y_boundary_max-dPML),Float64(dPML),alphaPML);
+        mu_tensor=add_rectangular_PML(1.0,Float64(x_boundary_min+dPML),Float64(x_boundary_max-dPML),Float64(dPML),Float64(y_boundary_min+dPML),Float64(y_boundary_max-dPML),Float64(dPML),alphaPML);
     end
-    FEM2D_anisotropic(lambda,epsilon_tensor,mu_tensor,model2,approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
+    FEM2D_anisotropic(lambda,epsilon_tensor,mu_tensor,UnitfulModel(model2,PositionUnit),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
 end
 """
-    FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+    FEM2D_anisotropic(lambda::realLength,epsilon_ini::Function,mu_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
 
 Returns a vector of `Mode{VectorFieldFEM2D}`.
 The fiber is anisotropic and described with its relative permittivity tensor and its relative permeability tensor. The PML is assumed to be already included in the tensors epsilon and mu.
@@ -774,18 +870,52 @@ The fiber is anisotropic and described with its relative permittivity tensor and
 - lambda: wavelength
 - epsilon: `tensor3` with functions of (x,y) that describes the relative permittivity tensor profile
 - mu: `tensor3` with functions of (x,y) that describes the relative permeability tensor profile
-- model: DiscreteModel generated with `GridapGmsh.jl`
+- model: DiscreteModel generated with `GridapGmsh.jl` with a unit
 - approx_neff: effective index around which the modes will be computed
 - neigs: number of modes to calculate
 - order: order of the FEM
 - field: boolean that indicates if fields must be saved
-- solver: can be :LU or :MUMPS
+- solver: can be :LU, :MUMPS or :CUDSS
 - tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
 - verbose: boolean that enables some outputs
 - boundary_tag: tag of the boundary in model.
 
 """
-function FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+function FEM2D_anisotropic(lambda::realLength,epsilon_ini::Function,mu_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+    model=um.model
+    PositionUnit=um.unit
+    if (lambda<=0u"m")
+        throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
+    end
+    if (neigs<=0)
+        throw(DomainError(nb, "The number of modes must be strictly positive"));
+    end
+    if (2 ∉ getproperty.(methods(epsilon_ini),:nargs))
+        throw(DomainError(epsilon_ini, "The permittivity function must have 1 argument"));
+    end
+    if (2 ∉ getproperty.(methods(mu_ini),:nargs))
+        throw(DomainError(mu_ini, "The permeability function must have 1 argument"));
+    end
+    if (num_dims(model)!=2)
+        throw(DomainError(model, "The model must be 2D"));
+    end
+    if (approx_neff<0)
+        throw(DomainError(approx_neff, "The approximative effective index must be positive or null"));
+    end
+    if (order<1)
+        throw(DomainError(order, "The order must be at least 1"));
+    end
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
+    end
+    if (tol<0)
+        throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+
+    lambda_ini=lambda
+    lambda=ustrip(PositionUnit,lambda)
+    epsilon(x)=epsilon_ini(x*PositionUnit)
+    mu(x)=mu_ini(x*PositionUnit)
     k=2*pi/lambda;
     reffe1 = ReferenceFE(nedelec,order)
     reffe2 = ReferenceFE(lagrangian,Float64,order+1)
@@ -803,13 +933,14 @@ function FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::Disc
     U = MultiFieldFESpace([U1, U2])
     degree = 2*order+2;
     dΩ = Measure(Ω,degree);
-    invmu=inverse(mu);
-    tensor_C(x)=TensorValue(invmu.yy(x),-invmu.yx(x),-invmu.xy(x),invmu.xx(x))
-    tensor_B(x)=TensorValue(invmu.yy(x),-invmu.xy(x),-invmu.yx(x),invmu.xx(x))
-    vector_B1(x)=VectorValue(-invmu.zy(x),invmu.zx(x))
-    vector_B2(x)=VectorValue(invmu.yz(x),-invmu.xz(x))
+    invmu(x)=inv(mu(x));
+    tensor_C(x)=TensorValue(getindex(invmu(x),2,2),-getindex(invmu(x),2,1),-getindex(invmu(x),1,2),getindex(invmu(x),1,1))
+    tensor_B(x)=TensorValue(getindex(invmu(x),2,2),-getindex(invmu(x),1,2),-getindex(invmu(x),2,1),getindex(invmu(x),1,1))
+    vector_B1(x)=VectorValue(-getindex(invmu(x),3,2),getindex(invmu(x),3,1))
+    vector_B2(x)=VectorValue(getindex(invmu(x),2,3),-getindex(invmu(x),1,3))
+    invmuzz(x)=getindex(invmu(x),3,3)
     
-    a((Et1,Ez1),(Et2,Ez2))=∫( -curl(Et2)*(vector_B1⋅(∇(Ez1))+invmu.zz.f*curl(Et1))-curl(Et1)*(vector_B2⋅(∇(Ez2)))-(∇(Ez1))⋅(tensor_C⋅(∇(Ez2))) + k^2/eps0*(computeDt(Et1,Ez1,epsilon)⋅Et2+computeDz(Et1,Ez1,epsilon)*Ez2) )*dΩ
+    a((Et1,Ez1),(Et2,Ez2))=∫( -curl(Et2)*(vector_B1⋅(∇(Ez1))+invmuzz*curl(Et1))-curl(Et1)*(vector_B2⋅(∇(Ez2)))-(∇(Ez1))⋅(tensor_C⋅(∇(Ez2))) + k^2/eps0*(computeDt(Et1,Ez1,epsilon)⋅Et2+computeDz(Et1,Ez1,epsilon)*Ez2) )*dΩ
     b((Et1,Ez1),(Et2,Ez2))=∫( Et1⋅(tensor_C⋅(∇(Ez2)))-Et2⋅(tensor_B⋅(∇(Ez1)))+(vector_B1⋅Et1)*curl(Et2)+(vector_B2⋅Et2)*curl(Et1) )*dΩ
     c((Et1,Ez1),(Et2,Ez2))=∫( -(Et1⋅(tensor_C⋅Et2)) )*dΩ
 
@@ -819,7 +950,9 @@ function FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::Disc
     A=fetch(A_task);
     B=fetch(B_task);
     C=fetch(C_task);
+    #return A,B,C
     E,F=get_companion(A,im.*B,C);
+    #return E,F;
     if (verbose)
         println("Matrices of dimension ",size(E), " created.")
     end
@@ -827,67 +960,96 @@ function FEM2D_anisotropic(lambda::Real,epsilon::tensor3,mu::tensor3,model::Disc
         tmp1,tmp2=eigs_LU(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
     elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+    elseif (solver==:CUDSS)
+        tmp1,tmp2=eigs_CUDA(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose,ir_n_steps=10);
     else
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
     end
     neff=tmp1/k;
     if (verbose)
         println("Found ",length(neff)," eigenvalues.")
     end
     if (field)
-        sol=Vector{Mode{VectorFieldFEM2D}}(undef,0);
+        sol=Vector{Mode{VectorFiberEMField}}(undef,0);
         for i in axes(neff,1)
             name=string("Mode n°",string(i));
             Et,Ez=FEFunction(U,tmp2[:,i])
-            ux=VectorValue(1.0,0.0);
-            uy=VectorValue(0.0,1.0);
-            Ex=Et⋅ux;
-            Ey=Et⋅uy;
-            Bt,Bz=computeB(Et,Ez,lambda,neff[i]);
-            Ht,Hz=computeH(Bt,Bz,invmu);
-            Hx=Ht⋅ux;
-            Hy=Ht⋅uy;
-            push!(sol,Mode(name,neff[i],lambda,VectorFieldFEM2D(dΩ,Ex,Ey,Ez,Hx,Hy,Hz)));
+            T=TensorValue([1 0 ; 0 1 ; 0 0])
+            E=T⋅Et+Ez*VectorValue(0,0,im*2.0*pi*neff[i]/lambda)
+            Bt,Bz=computeB2(Et,Ez,lambda,neff[i]);
+            Ht,Hz=computeH(Bt,Bz,mu);
+            H=T⋅Ht+Hz*VectorValue(0,0,1)
+            push!(sol,Mode(name,neff[i],lambda_ini,VectorFiberEMField(FEMField(E,dΩ,PositionUnit,u"V/m"),FEMField(H,dΩ,PositionUnit,u"A/m"))));
         end
     else
         sol=Vector{Mode{Nothing}}(undef,0);
         for i in axes(neff,1)
             name=string("Mode n°",string(i));
-            push!(sol,Mode(name,neff[i],lambda));
+            push!(sol,Mode(name,neff[i],lambda_ini));
         end
     end
     return sol
 end
 
 """
-    FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+    FEM2D_anisotropic(lambda::Real,epsilon_ini::Function,mu_ini::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+
+Returns a vector of `Mode{VectorFieldFEM2D}`.
+The fiber is anisotropic and described with its relative permittivity tensor and its relative permeability tensor. The PML is assumed to be already included in the tensors epsilon and mu.
+
+- lambda: wavelength (m)
+- epsilon: `tensor3` with functions of (x,y) that describes the relative permittivity tensor profile
+- mu: `tensor3` with functions of (x,y) that describes the relative permeability tensor profile
+- model: DiscreteModel generated with `GridapGmsh.jl` (m)
+- approx_neff: effective index around which the modes will be computed
+- neigs: number of modes to calculate
+- order: order of the FEM
+- field: boolean that indicates if fields must be saved
+- solver: can be :LU, :MUMPS or :CUDSS
+- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
+- verbose: boolean that enables some outputs
+- boundary_tag: tag of the boundary in model.
+
+"""
+function FEM2D_anisotropic(lambda::Real,epsilon_ini::Function,mu_ini::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+    eps_fonc=x->epsilon_ini(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
+    mu_fonc=x->mu_ini(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
+    FEM2D_anisotropic(lambda*1u"m",eps_fonc,mu_fonc,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
+end
+"""
+    FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:inverseRealLength}=[0.0,0.0]u"m^-1",type::Symbol=:Scalar)
 
 Returns a vector of `Mode`.
 The fiber is isotropic and described with its relative permittivity. The mesh must be periodic.
 
 - lambda: wavelength
-- epsilon: function of (x,y) that describes the relative permittivity profile
-- model: DiscreteModel generated with `GridapGmsh.jl`
+- n_fonc: function of (x,y) that describes the refractive index profile
+- model: DiscreteModel generated with `GridapGmsh.jl` with a unit
 - approx_neff: effective index around which the modes will be computed
 - neigs: number of modes to calculate
 - order: order of the FEM
 - field: boolean that indicates if fields must be saved
-- solver: can be :LU or :MUMPS
+- solver: can be :LU, :MUMPS or :CUDSS
 - tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
 - verbose: boolean that enables some outputs
 - kt: vector of the 2D Brillouin zone
 - type: :Scalar or :Vector
 
 """
-function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+function FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:inverseRealLength}=[0.0,0.0]u"m^-1",type::Symbol=:Scalar)
+    model=um.model
+    PositionUnit=um.unit
+    lambda_ini=lambda
+    lambda=ustrip(PositionUnit,lambda)
+    kt=ustrip.(PositionUnit^(-1),kt)
     if (lambda<=0)
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
     if (neigs<=0)
         throw(DomainError(neigs, "The number of modes must be strictly positive"));
     end
-    if (first(methods(eps_fonc)).nargs!=2)
-        throw(DomainError(eps_fonc, "The permittivity function must have 1 argument"));
+    if (first(methods(n_fonc)).nargs!=2)
+        throw(DomainError(n_fonc, "The permittivity function must have 1 argument"));
     end
     if (num_dims(model)!=2)
         throw(DomainError(model, "The model must be 2D"));
@@ -898,8 +1060,8 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
     if (order<1)
         throw(DomainError(order, "The order must be at least 1"));
     end
-    if (!(solver in [:LU,:MUMPS]))
-        throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+    if (!(solver in [:LU,:MUMPS,:CUDSS]))
+        throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
@@ -910,11 +1072,12 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
 
     coord=Gridap.ReferenceFEs.get_node_coordinates(model.grid)
     if (approx_neff<=0)
-        approx_neff=maximum(sqrt.(eps_fonc.(coord)))
+        approx_neff=maximum(n_fonc.(coord*PositionUnit))
         if (verbose)
             println("Set approx_neff to ",approx_neff)
         end
     end
+    eps_fonc=x->(n_fonc(VectorValue((x[1]*PositionUnit,x[2]*PositionUnit))))^2
     
     if (type==:Vector)
         k=2*pi/lambda;
@@ -930,7 +1093,6 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
         U = MultiFieldFESpace([U1, U2])
         degree = 2*order+2;
         dΩ = Measure(Ω,degree);
-        invmu=tensor3(1.0)
 
         a((Et1,Ez1),(Et2,Ez2))=∫( -(curl(Et2)-ikx×Et2)*(curl(Et1)+ikx×Et1)-(∇(Ez1)+ikx*Ez1)⋅(∇(Ez2)-ikx*Ez2) + k^2*(Et1⋅(eps_fonc*Et2)+Ez1⋅(eps_fonc*Ez2)) )*dΩ
         b((Et1,Ez1),(Et2,Ez2))=∫( Et1⋅(∇(Ez2)-ikx*Ez2)-Et2⋅(∇(Ez1)+ikx*Ez1) )*dΩ
@@ -950,27 +1112,26 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
             tmp1,tmp2=eigs_LU(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
         elseif (solver==:MUMPS)
             tmp1,tmp2=eigs_MUMPS(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+        elseif (solver==:CUDSS)
+            tmp1,tmp2=eigs_CUDA(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose,ir_n_steps=10);
         else
-            throw(DomainError(solver, "solver must be :LU or :MUMPS"));
+            throw(DomainError(solver, "solver must be :LU, :MUMPS or CUDSS"));
         end
         neff=tmp1/k;
         if (verbose)
             println("Found ",length(neff)," eigenvalues.")
         end
         if (field)
-            sol=Vector{Mode{VectorFieldFEM2D}}(undef,0);
+            sol=Vector{Mode{VectorFiberEMField}}(undef,0);
             for i in axes(neff,1)
                 name=string("Mode n°",string(i));
                 Et,Ez=FEFunction(U,tmp2[:,i])
-                ux=VectorValue(1.0,0.0);
-                uy=VectorValue(0.0,1.0);
-                Ex=Et⋅ux;
-                Ey=Et⋅uy;
+                T=TensorValue([1 0 ; 0 1 ; 0 0])
+                E=T⋅Et+Ez*VectorValue(0,0,im*2.0*pi*neff[i]/lambda)
                 Bt,Bz=computeB(Et,Ez,lambda,neff[i]);
-                Ht,Hz=computeH(Bt,Bz,invmu);
-                Hx=Ht⋅ux;
-                Hy=Ht⋅uy;
-                push!(sol,Mode(name,neff[i],lambda,VectorFieldFEM2D(dΩ,Ex,Ey,Ez,Hx,Hy,Hz)));
+                Ht,Hz=computeH(Bt,Bz);
+                H=T⋅Ht+Hz*VectorValue(0,0,1)
+                push!(sol,Mode(name,neff[i],lambda_ini,VectorFiberEMField(FEMField(E,dΩ,PositionUnit,u"V/m"),FEMField(H,dΩ,PositionUnit,u"A/m"))));
             end
         else
             sol=Vector{Mode{Nothing}}(undef,0);
@@ -998,20 +1159,22 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
         end
         if (solver==:LU)
             tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
-        else
+        elseif (solver==:MUMPS)
             tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
+        else
+            tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
         end
         neff=sqrt.(tmp1/k2);
         if (verbose)
             println("Found ",length(neff)," eigenvalues.")
         end
         if (field)
-            sol=Vector{Mode{ScalarFieldFEM2D}}(undef,0);
+            sol=Vector{Mode{ScalarFiberEMField2D}}(undef,0);
             E=[FEFunction(U,tmp2[:,i]) for i in axes(tmp2,2)];
             for i in axes(neff,1)
                 name=string("Mode LP n°",string(i));
-                push!(sol,Mode(name,neff[i],lambda,ScalarFieldFEM2D(dΩ,E[i])));
-            end
+                push!(sol,Mode(name,neff[i],lambda_ini,ScalarFiberEMField2D(FEMField(E[i],dΩ,PositionUnit,u"V/m"))));
+            end 
         else
             sol=Vector{Mode{Nothing}}(undef,0);
             for i in axes(neff,1)
@@ -1023,3 +1186,27 @@ function FEM2D_periodic(lambda::Real,eps_fonc::Function,model::DiscreteModel;app
     return sol;
 end
 
+"""
+    FEM2D_periodic(lambda::Real,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+
+Returns a vector of `Mode`.
+The fiber is isotropic and described with its relative permittivity. The mesh must be periodic.
+
+- lambda: wavelength (m)
+- n_fonc: function of (x,y) that describes the relative permittivity profile
+- model: DiscreteModel generated with `GridapGmsh.jl`
+- approx_neff: effective index around which the modes will be computed
+- neigs: number of modes to calculate
+- order: order of the FEM
+- field: boolean that indicates if fields must be saved
+- solver: can be :LU, :MUMPS or :CUDSS
+- tol: tolerance for the eigenvalue solver (see documention of ArnoldiMethod.jl)
+- verbose: boolean that enables some outputs
+- kt: vector of the 2D Brillouin zone (m^-1)
+- type: :Scalar (default) or :Vector
+
+"""
+function FEM2D_periodic(lambda::Real,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:Real}=[0.0,0.0],type::Symbol=:Scalar)
+     n_fonc2=x->n_fonc(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
+     FEM2D_periodic(lambda*1u"m",n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,kt=kt*u"m^-1",type=type)
+end

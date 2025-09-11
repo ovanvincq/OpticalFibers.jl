@@ -1413,7 +1413,7 @@ function findroot(k0::Float64,nu::Int64,neff::Vector{Float64},radius::Union{Vect
 end
 
 """
-    multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+    multi_step_fiber_modes(lambda::realLength,nu::Integer,radius::Union{Vector{<:realLength},realLength},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
 
 Returns a vector of `Mode{ScalarFieldFunction1D}` if type=:Scalar or a vector of `Mode{VectorFieldFunction2D}` if type=:Vector.
 
@@ -1423,10 +1423,12 @@ Returns a vector of `Mode{ScalarFieldFunction1D}` if type=:Scalar or a vector of
 - index: refractive index of each layer (the cladding is included so that length(index) must be equal to length(radius)+1)
 - field: boolean that indicates if fields must be saved
 - precision: absolute precision required on the effective index 
-- type: must be :Scalar or :Vector
+- type: must be :Scalar (default) or :Vector
 - firstDivision: in the case of a very multimode fiber, you can increase this number if some modes are missing. If firstDivision=0, the value of firstDivision is approximated by the solver.
 """
-function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+function multi_step_fiber_modes(lambda_unitful::realLength,nu::Integer,radius_unitful::Union{Vector{<:realLength},realLength},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+    lambda=ustrip(u"m",lambda_unitful)
+    radius=ustrip.(u"m",radius_unitful)
     if (length(index) != (length(radius)+1))
         throw(DimensionMismatch("dim(radii) must be equal to dim(n)-1"));
     end
@@ -1511,7 +1513,6 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                 end
             end
         end
-
         if (!field)
             Nm=length(neff_min);
             resize!(modes,pos0+Nm);
@@ -1533,7 +1534,7 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                         name=string("EH ",string(nu),",",string(nb2));
                     end
                 end
-                modes[pos0+n]=Mode(name,neff_result,lambda);
+                modes[pos0+n]=Mode(name,neff_result,lambda_unitful);
             end
         else
             if (type==:Scalar)
@@ -1541,10 +1542,11 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                 resize!(modes,Nm);
                 for n=1:length(neff_min)
                     neff_result=(neff_min[n]+neff_max[n])/2.0;
-                    name=string("LP ",string(nu),",",string(length(neff_min)-n+1));
                     A,B=findAB_scalar(k0,nu,neff_result,radius,index);
                     E=x->scalarField_scalar(Float64(x[1]),nu,neff_result,k0,radius,index,A,B);
-                    modes[n]=Mode(name,neff_result,lambda,ScalarFieldFunction1D(nu,E));
+                    f=x->E(ustrip.(u"m",x))u"V/m"
+                    name=string("LP ",string(nu),",",string(length(neff_min)-n+1));
+                    modes[n]=Mode(name,neff_result,lambda_unitful,ScalarFiberEMField1D(nu,FunctionField(1,f)));
                 end
             else
                 #Vector case
@@ -1562,7 +1564,10 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                         TM_Hx=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
                         TM_Hy=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
                         name=string("TM 0,",string(length(neff_min)-n+1));
-                        modes[n]=Mode(name,neff_result,lambda,VectorFieldFunction2D(TM_Ex,TM_Ey,TM_Ez,TM_Hx,TM_Hy,TM_Hz));
+                        E=x->VectorValue(TM_Ex(ustrip.(u"m",x))u"V/m",TM_Ey(ustrip.(u"m",x))u"V/m",TM_Ez(ustrip.(u"m",x))u"V/m")
+                        H=x->VectorValue(TM_Hx(ustrip.(u"m",x))u"A/m",TM_Hy(ustrip.(u"m",x))u"A/m",TM_Hz(ustrip.(u"m",x))u"A/m")
+                        #modes[n]=Mode(name,neff_result,lambda_unitful,VectorEMField2D(FunctionField(2,E),FunctionField(2,H)));
+                        modes[n]=Mode(name,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E),FunctionField(2,H)));;
                     end
                 elseif t[it]==3
                     #TE
@@ -1578,7 +1583,11 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                         TM_Hx=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
                         TM_Hy=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,true);
                         name=string("TE 0,",string(length(neff_min)-n+1));
-                        modes[pos0+n]=Mode(name,neff_result,lambda,VectorFieldFunction2D(TM_Ex,TM_Ey,TM_Ez,TM_Hx,TM_Hy,TM_Hz));
+                        E=x->VectorValue(TM_Ex(ustrip.(u"m",x))u"V/m",TM_Ey(ustrip.(u"m",x))u"V/m",TM_Ez(ustrip.(u"m",x))u"V/m")
+                        H=x->VectorValue(TM_Hx(ustrip.(u"m",x))u"A/m",TM_Hy(ustrip.(u"m",x))u"A/m",TM_Hz(ustrip.(u"m",x))u"A/m")
+                        #modes[pos0+n]=Mode(name,neff_result,lambda_unitful,VectorEMField2D(FunctionField(2,E),FunctionField(2,H)));
+                        modes[pos0+n]=Mode(name,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E),FunctionField(2,H)));
+                        #modes[pos0+n]=Mode(name,neff_result,lambda_unitful,VectorEMFieldFunction2D(x->TM_Ex(ustrip.(u"m",x))u"V/m",x->TM_Ey(ustrip.(u"m",x))u"V/m",x->TM_Ez(ustrip.(u"m",x))u"V/m",x->TM_Hx(ustrip.(u"m",x))u"A/m",x->TM_Hy(ustrip.(u"m",x))u"A/m",x->TM_Hz(ustrip.(u"m",x))u"A/m"));
                     end
                 else
                     #HE-EH
@@ -1609,13 +1618,37 @@ function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:
                         HEEH_Hz2=x->-im*Hz_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
                         HEEH_Hx2=x->Hx_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
                         HEEH_Hy2=x->Hy_scalar(hypot(x[1],x[2]),atan(x[2],x[1]),nu,neff_result,k0,radius,index,A1,A2,A3,A4,false);
-                        modes[2*n-1]=Mode(name1,neff_result,lambda,VectorFieldFunction2D(HEEH_Ex,HEEH_Ey,HEEH_Ez,HEEH_Hx,HEEH_Hy,HEEH_Hz));
-                        modes[2*n]=Mode(name2,neff_result,lambda,VectorFieldFunction2D(HEEH_Ex2,HEEH_Ey2,HEEH_Ez2,HEEH_Hx2,HEEH_Hy2,HEEH_Hz2));
+                        E=x->VectorValue(HEEH_Ex(ustrip.(u"m",x))u"V/m",HEEH_Ey(ustrip.(u"m",x))u"V/m",HEEH_Ez(ustrip.(u"m",x))u"V/m")
+                        H=x->VectorValue(HEEH_Hx(ustrip.(u"m",x))u"A/m",HEEH_Hy(ustrip.(u"m",x))u"A/m",HEEH_Hz(ustrip.(u"m",x))u"A/m")
+                        E2=x->VectorValue(HEEH_Ex2(ustrip.(u"m",x))u"V/m",HEEH_Ey2(ustrip.(u"m",x))u"V/m",HEEH_Ez2(ustrip.(u"m",x))u"V/m")
+                        H2=x->VectorValue(HEEH_Hx2(ustrip.(u"m",x))u"A/m",HEEH_Hy2(ustrip.(u"m",x))u"A/m",HEEH_Hz2(ustrip.(u"m",x))u"A/m")
+                        modes[2*n]=Mode(name1,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E),FunctionField(2,H)));
+                        modes[2*n-1]=Mode(name2,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E2),FunctionField(2,H2)));
+                        #modes[2*n-1]=Mode(name1,neff_result,lambda_unitful,VectorEMFieldFunction2D(x->HEEH_Ex(ustrip.(u"m",x))u"V/m",x->HEEH_Ey(ustrip.(u"m",x))u"V/m",x->HEEH_Ez(ustrip.(u"m",x))u"V/m",x->HEEH_Hx(ustrip.(u"m",x))u"A/m",x->HEEH_Hy(ustrip.(u"m",x))u"A/m",x->HEEH_Hz(ustrip.(u"m",x))u"A/m"));
+                        #modes[2*n]=Mode(name2,neff_result,lambda_unitful,VectorEMFieldFunction2D(x->HEEH_Ex2(ustrip.(u"m",x))u"V/m",x->HEEH_Ey2(ustrip.(u"m",x))u"V/m",x->HEEH_Ez2(ustrip.(u"m",x))u"V/m",x->HEEH_Hx2(ustrip.(u"m",x))u"A/m",x->HEEH_Hy2(ustrip.(u"m",x))u"A/m",x->HEEH_Hz2(ustrip.(u"m",x))u"A/m"));
                     end
                 end
             end
         end
         pos0=Nm;
     end
-    return reverse(modes);
+    return reverse(convert(Vector{typeof(modes[1])},modes));
+end
+
+"""
+    multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+
+Returns a vector of `Mode{ScalarFieldFunction1D}` if type=:Scalar or a vector of `Mode{VectorFieldFunction2D}` if type=:Vector.
+
+- lambda: wavelength (m)
+- nu: azimuthal number
+- radius: outer radius of each layer (m, the cladding is inifinite and has no radius)
+- index: refractive index of each layer (the cladding is included so that length(index) must be equal to length(radius)+1)
+- field: boolean that indicates if fields must be saved
+- precision: absolute precision required on the effective index 
+- type: must be :Scalar (default) or :Vector
+- firstDivision: in the case of a very multimode fiber, you can increase this number if some modes are missing. If firstDivision=0, the value of firstDivision is approximated by the solver.
+"""
+function multi_step_fiber_modes(lambda::Real,nu::Integer,radius::Union{Vector{<:Real},Real},index::Vector{<:Real};field::Bool=false,precision::Float64=1E-12,type::Symbol=:Scalar,firstDivision::Integer=0)
+    multi_step_fiber_modes(lambda*u"m",nu,radius*u"m",index,field=field,precision=precision,type=type,firstDivision=firstDivision)
 end
