@@ -18,7 +18,7 @@ Pkg.add("OpticalFibers")
 
 ## Quickstart
 ### Finding guided modes of a step-index fiber using the semi-analytical mode solver
-Computation of the scalar fundamental mode LP$_{01}$ of a step index fiber with a core-radius of 2 µm, a refractive index of 1.47 for core and 1.45 for cladding at a wavelength of 1 µm:
+Computation of the scalar fundamental mode $\text{LP}_{01}$ of a step index fiber with a core-radius of 2 µm, a refractive index of 1.47 for core and 1.45 for cladding at a wavelength of 1 µm:
 ```julia
 julia> using OpticalFibers, OpticalFibers.ModeSolvers
 julia> ms=multi_step_fiber_modes(1u"µm",0,2u"µm",[1.47,1.45],field=true)
@@ -30,7 +30,7 @@ julia> plot(r,abs.(ms[1].EMField.E.(r)),xlabel="r",ylabel="|E|",label="Fundament
 ```
 ![Step Index Fiber-FM](docs/src/assets/SIF.png)
 
-Computation of the fundamental vector mode HE$_{11}$ of the same fiber:
+Computation of the fundamental vector mode $\text{HE}_{11}$ of the same fiber:
 ```julia
 julia> mv=multi_step_fiber_modes(1u"µm",1,2u"µm",[1.47,1.45],type=:Vector)
 1-element Vector{Mode}:
@@ -152,4 +152,5 @@ julia> ms2D_bent=FEM2D(1.55u"µm",RIP2D_bent,model*u"µm",field=true,neigs=1,dPM
 
 
 ## Credits
+
 OpticalFibers.jl is maintained by Olivier Vanvincq ([University of Lille](https://www.univ-lille.fr/), [PhLAM laboratory](https://phlam.univ-lille.fr/)).
