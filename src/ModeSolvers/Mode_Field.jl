@@ -45,7 +45,7 @@ end
 """
     struct ScalarFiberEMField2D <:ScalarFiberEMField
     
-Described an electromagnetic field in a fiber with a cylindrical symmetry in the scalar approximation.
+Described an electromagnetic field in a fiber in the scalar approximation.
 - E :: `UnitfulField{2,(),ElectricFieldDim}`
 
 The additional property `normE` gives the norm of the electric field.
@@ -123,7 +123,7 @@ end
     
 Described an electromagnetic field in a fiber.
 - E :: `UnitfulField{2,(3,),ElectricFieldDim}`
-- H :: `UnitfulField{2,(3,),ElectricFieldDim}`
+- H :: `UnitfulField{2,(3,),MagneticFieldDim}`
 
 Additional properties can be computed:
 - normE : Norm of the electric field
