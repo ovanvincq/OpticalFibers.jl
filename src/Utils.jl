@@ -24,6 +24,10 @@ const realLength=Unitful.Quantity{<:Real,Unitful.𝐋}
 const realQuantity=Unitful.Quantity{<:Real}
 #const inverseLength=Unitful.Quantity{<:Number,Unitful.𝐋^-1}
 
+function Base.conj(g::Gain)
+    return conj(g.val)*logunit(g)
+end
+
 """
     piecewiseIndex(pos::T,r::Union{AbstractVector{<:T2},T2},n::AbstractVector) where {T<:Union{Real,realQuantity},T2<:Union{Real,realQuantity}}
 
@@ -59,6 +63,11 @@ function meshgrid(vx::AbstractVector{T}, vy::AbstractVector{T}) where T
     vx = reshape(vx, 1, n)
     vy = reshape(vy, m, 1)
     (repeat(vx, m, 1), repeat(vy, 1, n))
+end
+
+function isequidistant(v0::AbstractVector{<:Real})
+    v=diff(v0)
+    return all(isapprox.(v,sum(v)/length(v)))
 end
 
 function derivative_iteration(t::Tuple{Vector{<:Union{Real,Quantity{<:Real}}},Vector{<:Union{Number,Quantity}}})
@@ -488,10 +497,10 @@ end
 """
     function_integrate_unitful(f::Function,a::AbstractVector,b::AbstractVector;characteristic_length::AbstractVector=[],kwargs...)
 
-Returns the integral ``\\int_{a_1}^{b_1} \\int_{a_2}^{b_2} ... f(x) dx`` where x is a `Point` of dimension length(a) with unit handling. The integration is performed with a change of variable ```x=tan(t)``` and the hcubature function of the Cubature.jl package.
+Returns the integral ``\\int_{a_1}^{b_1} \\int_{a_2}^{b_2} ... f(x) dx`` where x is a `Point` of dimension length(a) with unit handling. The integration is performed with a change of variable ```x=tan(t)``` and the `hcubature` function of the `HCubature.jl` package.
 - a: Vector of the lower bounds of integration
 - b: Vector of the upper bounds of integration
-- characteristic_length: Vector of characteristic lengths to make the integration bounds unitless and significant variations around 1. If not provided, the unit of a is used.
+- characteristic_length: Vector of characteristic lengths to make the integration bounds unitless and significant variations around 1. If not provided, the unit of  `a` is used.
 - kwargs: keyword arguments of the hcubature function (atol, rtol, initdiv, norm)
 
 """
@@ -548,7 +557,7 @@ end
 """
     function_integrate(f::Function,a::AbstractVector,b::AbstractVector;kwargs...)
 
-Returns the integral ``\\int_{a_1}^{b_1} \\int_{a_2}^{b_2} ... f(x) dx`` where x is a unitless `Point`. The integration is performed with a change of variable ```x=tan(t)``` and the hcubature function of the Cubature.jl package.
+Returns the integral ``\\int_{a_1}^{b_1} \\int_{a_2}^{b_2} ... f(x) dx`` where x is a unitless `Point`. The integration is performed with a change of variable ```x=tan(t)``` and the `hcubature` function of the `HCubature.jl` package.
 - a: Vector of the lower bounds of integration
 - b: Vector of the upper bounds of integration
 - kwargs: keyword arguments of the hcubature function (atol, rtol, initdiv, norm)
@@ -560,6 +569,7 @@ function function_integrate(f::Function,a::AbstractVector,b::AbstractVector;kwar
     g2(x)=f(Point((tan.(x.data))))*prod(1.0.+(tan.(x.data)).^2);
     return hcubature(g2,aa,bb;kwargs...)
 end
+#Peut-être utiliser Integrals.jl à l'avenir mais pas de gain
 
 
 """
