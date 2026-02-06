@@ -8,13 +8,13 @@ const MagneticFieldDim=Unitful.dimension(u"A/m")
 """
     abstract type FiberEMField end
 
-Described an electromagnetic field in a fiber.
+Describe an electromagnetic field in a fiber.
 """
 abstract type FiberEMField end
 """
     abstract type ScalarFiberEMField <:FiberEMField end
 
-Described an electromagnetic field in a fiber in the scalar approximation.
+Describe an electromagnetic field in a fiber in the scalar approximation.
 """
 abstract type ScalarFiberEMField <:FiberEMField end
 
@@ -24,7 +24,7 @@ Broadcast.:broadcastable(f::FiberEMField)=Ref(f)
 """
     struct ScalarFiberEMField1D <:ScalarFiberEMField
 
-Described an electromagnetic field in a fiber with a cylindrical symmetry in the scalar approximation.
+Describe an electromagnetic field in a fiber with a cylindrical symmetry in the scalar approximation.
 - nu :: `Int` - Azimuthal number
 - E :: `UnitfulField{1,(),ElectricFieldDim}`
 
@@ -45,7 +45,7 @@ end
 """
     struct ScalarFiberEMField2D <:ScalarFiberEMField
     
-Described an electromagnetic field in a fiber in the scalar approximation.
+Describe an electromagnetic field in a fiber in the scalar approximation.
 - E :: `UnitfulField{2,(),ElectricFieldDim}`
 
 The additional property `normE` gives the norm of the electric field.
@@ -121,7 +121,7 @@ end
 """
     struct VectorFiberEMField <: FiberEMField
     
-Described an electromagnetic field in a fiber.
+Describe an electromagnetic field in a fiber.
 - E :: `UnitfulField{2,(3,),ElectricFieldDim}`
 - H :: `UnitfulField{2,(3,),MagneticFieldDim}`
 
@@ -365,6 +365,15 @@ function normalize(m::Mode{ScalarFiberEMField1D};unitIntegral::Bool=true,rtol::N
     return Mode(m.Name,m.neff,m.lambda,ScalarFiberEMField1D(m.EMField.nu,E))
 end
 
+function normalize(f::ScalarFiberEMField1D;characteristic_length::AbstractVector{<:realLength}=[1u"µm"],rtol::Number=1E-6,initdiv::Int=1)
+    E2=integrate(abs2(f.E)*(x->x[1]),[0]*unit(characteristic_length[1]),[Inf]*unit(characteristic_length[1]),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)*2*pi
+    if (f.nu!=0)
+        E2=E2*0.5;
+    end
+    E=m.EMField.E/ustrip(u"V",sqrt(E2))
+    return ScalarFiberEMField1D(f.nu,E)
+end
+
 function normalize(m::Mode{ScalarFiberEMField2D};unitIntegral::Bool=true,rtol::Number=1E-4,initdiv::Int=1)
     E2=integrate(abs2(m.EMField.E),characteristic_length=[m.lambda,m.lambda],rtol=rtol,initdiv=initdiv)
     if unitIntegral
@@ -373,6 +382,12 @@ function normalize(m::Mode{ScalarFiberEMField2D};unitIntegral::Bool=true,rtol::N
         E=m.EMField.E*ustrip(u"W^(-1/2)",sqrt(2*mu0_Unitful*c_Unitful/real(m.neff)/E2));
     end
     return Mode(m.Name,m.neff,m.lambda,ScalarFiberEMField2D(E))
+end
+
+function normalize(f::ScalarFiberEMField2D;characteristic_length::AbstractVector{<:realLength}=[1u"µm",1u"µm"],rtol::Number=1E-4,initdiv::Int=1)
+    E2=integrate(abs2(f.E),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)
+    E=f.E/ustrip(u"V",sqrt(E2))
+    return ScalarFiberEMField2D(E)
 end
 
 """
@@ -385,6 +400,12 @@ function normalize(m::Mode{VectorFiberEMField};rtol::Number=1E-4,initdiv::Int=1)
     return Mode(m.Name,m.neff,m.lambda,VectorFiberEMField(E,H))
 end
 
+function normalize(f::VectorFiberEMField;characteristic_length::AbstractVector{<:realLength}=[1u"µm",1u"µm"],rtol::Number=1E-4,initdiv::Int=1)
+    E2=real(integrate(f.Pz,characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv));
+    E=f.E/ustrip(u"sqrt(W)",sqrt(E2))
+    H=f.H/ustrip(u"sqrt(W)",sqrt(E2))
+    return VectorFiberEMField(E,H)
+end
 
 """
     overlap(f::ScalarFiberEMField1D,m::Mode{ScalarFiberEMField1D})
@@ -394,14 +415,36 @@ function overlap(f::ScalarFiberEMField1D,m::Mode{ScalarFiberEMField1D};rtol::Num
         return zero(ComplexF64)u"V"
     end
     m2=integrate(abs2(m.EMField.E)*(x->x[1]),[0]*unit(m.lambda),[Inf]*unit(m.lambda),characteristic_length=[m.lambda],rtol=rtol,initdiv=initdiv)*2*pi
+    if (f.nu!=0)
+        m2=m2*0.5;
+    end
     if atol==0u"V"
         atol=m2*rtol/2/pi
     else
         atol=atol*sqrt(m2)/2/pi
     end
     m1=integrate(f.E*conj(m.EMField.E)*(x->x[1]),[0]*unit(m.lambda),[Inf]*unit(m.lambda),characteristic_length=[m.lambda],rtol=rtol,atol=atol,intidiv=initdiv)*2*pi
+    if (f.nu!=0)
+        m1=m1*0.5;
+    end
     result=m1/sqrt(m2)
     return ComplexF64(ustrip(u"V",result))u"V"
+end
+
+function overlap(f1::ScalarFiberEMField1D,f2::ScalarFiberEMField1D;characteristic_length::AbstractVector{<:realLength}=[1u"µm"],rtol::Number=1E-6,atol::Number=0u"V^2",initdiv::Int=1)
+    if (f1.nu!= f2.nu)
+        return zero(ComplexF64)u"V^2"
+    end
+    m1=integrate(abs2(f1.E)*(x->x[1]),[0]*unit(characteristic_length[1]),[Inf]*unit(characteristic_length[1]),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)*2*pi
+    m2=integrate(abs2(f2.E)*(x->x[1]),[0]*unit(characteristic_length[1]),[Inf]*unit(characteristic_length[1]),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)*2*pi
+    if atol==0u"V^2"
+        atol=min(m1,m2)*rtol
+    end
+    m=integrate(f1.E*conj(f2.E)*(x->x[1]),[0]*unit(characteristic_length[1]),[Inf]*unit(characteristic_length[1]),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)*2*pi
+    if (f1.nu!=0)
+        m=m*0.5;
+    end
+    return ComplexF64(ustrip(u"V^2",m))u"V^2"
 end
 
 """
@@ -470,6 +513,19 @@ function overlap(m::Mode{ScalarFiberEMField2D},f::ScalarFiberEMField2D;rtol::Num
 end
 
 """
+    overlap(f::ScalarFiberEMField2D,m::Mode{ScalarFiberEMField2D})
+"""
+function overlap(f1::ScalarFiberEMField2D,f2::ScalarFiberEMField2D;characteristic_length::AbstractVector{<:realLength}=[1u"µm",1u"µm"],rtol::Number=1E-4,atol::Number=0u"V^2",initdiv::Int=1)
+    if atol==0u"V^2"
+        int1=integrate(abs2(f1.E),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)
+        int2=integrate(abs2(f2.E),characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv)
+        atol=min(int1,int2)*rtol
+    end
+    int=integrate(f1.E.*conj(f2.E),characteristic_length=characteristic_length,rtol=rtol,atol=atol,intidiv=initdiv)
+    return ComplexF64(ustrip(u"V^2",int))u"V^2"
+end
+
+"""
     overlap(m1::Mode{VectorFiberEMField},m2::Mode{VectorFiberEMField})
 """
 function overlap(m1::Mode{VectorFiberEMField},m2::Mode{VectorFiberEMField};rtol::Number=1E-4,atol::Number=0,initdiv::Int=1)
@@ -515,6 +571,16 @@ function overlap(f::VectorFiberEMField,m1::Mode{VectorFiberEMField};rtol::Number
     int=integrate(f.Ex*conj(m1.EMField.Hy)-f.Ey*conj(m1.EMField.Hx),characteristic_length=[m1.lambda,m1.lambda],rtol=rtol,atol=atol,intidiv=initdiv)*0.5
     result=int/sqrt(int1)
     return ComplexF64(ustrip(u"sqrt(W)",result))*u"sqrt(W)"
+end
+
+function overlap(f1::VectorFiberEMField,f2::VectorFiberEMField;characteristic_length::AbstractVector{<:realLength}=[1u"µm",1u"µm"],rtol::Number=1E-4,atol::Number=0u"W",initdiv::Int=1)
+    int1=real(integrate(f1.Pz,characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv))
+    int2=real(integrate(f2.Pz,characteristic_length=characteristic_length,rtol=rtol,initdiv=initdiv))
+    if atol==0u"W"
+        atol=min(int1,int2)*rtol
+    end
+    int=integrate(f1.Ex*conj(f2.Hy)-f1.Ey*conj(f2.Hx),characteristic_length=characteristic_length,rtol=rtol,atol=atol,intidiv=initdiv)*0.5
+    return ComplexF64(ustrip(u"W",int))*u"W"
 end
 
 """
@@ -594,24 +660,30 @@ end
     MFD(m::Mode{ScalarFiberEMField1D})
 """
 function MFD(m::Mode{ScalarFiberEMField1D})
-    f=x->m.EMField.E(x*m.lambda)-m.EMField.E(Point(0.0*m.lambda,))/ℯ
-    return 2*abs(find_zero(f,0))*m.lambda
+    return MFD(m.EMField;characteristic_length=m.lambda)
 end
 
 """
-    MFD(m::Mode{ScalarFiberEMField2D},theta::Real=0)
+    MFD(m::Union{Mode{ScalarFiberEMField2D},Mode{VectorFiberEMField}},theta::Real=0)
 """
-function MFD(m::Mode{ScalarFiberEMField2D},theta::Real=0)
-    f=x->m.EMField.E(Point(x*m.lambda*cosd(theta),x*m.lambda*sind(theta)))-m.EMField.E(Point(0.0*m.lambda,0.0*m.lambda))/ℯ
-    return 2*abs(find_zero(f,0))*m.lambda
+function MFD(m::Union{Mode{ScalarFiberEMField2D},Mode{VectorFiberEMField}},theta::Real=0)
+    return MFD(m.EMField,theta;characteristic_length=m.lambda)
 end
 
-"""
-    MFD(m::Mode{VectorFiberEMField},theta::Real=0)
-"""
-function MFD(m::Mode{VectorFiberEMField},theta::Real=0)
-    f=x->m.EMField.Pz(Point(x*m.lambda*cosd(theta),x*m.lambda*sind(theta)))-m.EMField.Pz(Point(0.0*m.lambda,0.0*m.lambda))/ℯ^2
-    return 2*abs(find_zero(f,0.0))*m.lambda
+function MFD(f::ScalarFiberEMField1D;characteristic_length::realLength=1u"µm")
+    g=x->f.E(x*characteristic_length)-f.E(Point(0.0*characteristic_length,))/ℯ
+    return 2*abs(find_zero(g,0))*characteristic_length
+end
+
+function MFD(f::ScalarFiberEMField2D,theta::Real=0;characteristic_length::realLength=1u"µm")
+    g=x->f.E(Point(x*characteristic_length*cosd(theta),x*characteristic_length*sind(theta)))-f.E(Point(0.0*characteristic_length,0.0*characteristic_length))/ℯ
+    return 2*abs(find_zero(g,0))*characteristic_length
+end
+
+
+function MFD(f::VectorFiberEMField,theta::Real=0;characteristic_length::realLength=1u"µm")
+    g=x->f.Pz(Point(x*characteristic_length*cosd(theta),x*characteristic_length*sind(theta)))-f.Pz(Point(0.0*characteristic_length,0.0*characteristic_length))/ℯ^2
+    return 2*abs(find_zero(g,0.0))*characteristic_length
 end
 
 """
