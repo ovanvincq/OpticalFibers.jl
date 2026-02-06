@@ -410,7 +410,7 @@ save("FEM2_Pz.png",fig); nothing #hide
 ![Pz for FM computed with FEM](FEM2_Pz.png)
 
 ## Photonic bandgap fiber
-Before designing a PBG fiber, one has to compute the PBG of the infinite microstructured media that constitutes the cladding. In this example the cladding is a hexagonal lattice of circular rods with a pitch of 6 µm. The rods has a diameter of 3 µm and a refractive index of 1.47 while the cladding background media has a refractive index of 1.45. To compute the PBG, the mesh must be periodic. Since the cell is highly symmetric, the computation of the bands can be restricted to the highest symmetry points of the irreducible Brillouin zone (Γ, M and K).
+Before designing a PBG fiber, one has to compute the PBG of the infinite microstructured media that constitutes the cladding. In this example the cladding is a hexagonal lattice of circular rods with a pitch of 10 µm. The rods has a diameter of 3 µm and a refractive index of 1.47 while the cladding background media has a refractive index of 1.45. To compute the PBG, the mesh must be periodic. Since the cell is highly symmetric, the computation of the bands can be restricted to the highest symmetry points of the irreducible Brillouin zone (Γ, M and K).
 ```@example 7
 using Plots, OpticalFibers, OpticalFibers.ModeSolvers
 kt,weight=compute_kt(2,:Hexagon,Irreducible=true,MeshType=:Edge,Pitch=10u"µm")
