@@ -9,6 +9,7 @@ export n_Silicon
 export n_Germanium
 export Sa_Ytterbium
 export Se_Ytterbium
+export c_Unitful, mu0_Unitful, eps0_Unitful, h_Unitful, Z0_Unitful		
 
 """
     c=299792458.0
