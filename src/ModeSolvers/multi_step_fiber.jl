@@ -1632,7 +1632,11 @@ function multi_step_fiber_modes(lambda_unitful::realLength,nu::Integer,radius_un
         end
         pos0=Nm;
     end
-    return reverse(convert(Vector{typeof(modes[1])},modes));
+    if ~(isempty(modes))
+        return reverse(convert(Vector{typeof(modes[1])},modes));
+    else
+        return modes;
+    end
 end
 
 """
