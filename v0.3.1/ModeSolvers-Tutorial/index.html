@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>ModeSolvers-Tutorial · Opticalfibers.jl</title><meta name="title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta property="og:title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta property="twitter:title" content="ModeSolvers-Tutorial · Opticalfibers.jl"/><meta name="description" content="Documentation for Opticalfibers.jl."/><meta property="og:description" content="Documentation for Opticalfibers.jl."/><meta property="twitter:description" content="Documentation for Opticalfibers.jl."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script><link href="../assets/citations.css" rel="stylesheet" type="text/css"/></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">Opticalfibers.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../Unitful_Gridap/">Unitful and Gridap</a></li><li><a class="tocitem" href="../Common/">Common functions</a></li><li><a class="tocitem" href="../PhysicalData/">PhysicalData</a></li><li class="is-active"><a class="tocitem" href>ModeSolvers-Tutorial</a><ul class="internal"><li><a class="tocitem" href="#Bimodal-Step-index-Fiber"><span>Bimodal Step-index Fiber</span></a></li><li><a class="tocitem" href="#Gradient-index-fiber-and-dispersion"><span>Gradient index fiber and dispersion</span></a></li><li><a class="tocitem" href="#Leaky-modes-in-step-index-fiber-with-a-low-index-trench"><span>Leaky modes in step index fiber with a low index trench</span></a></li><li><a class="tocitem" href="#Bent-fiber"><span>Bent fiber</span></a></li><li><a class="tocitem" href="#Twisted-fiber"><span>Twisted fiber</span></a></li><li><a class="tocitem" href="#Photonic-crystal-fiber-(PCF)"><span>Photonic crystal fiber (PCF)</span></a></li><li><a class="tocitem" href="#Photonic-bandgap-fiber"><span>Photonic bandgap fiber</span></a></li></ul></li><li><a class="tocitem" href="../ModeSolvers/">ModeSolvers-Modes and Fields</a></li><li><a class="tocitem" href="../ModeSolvers-Solvers/">ModeSolvers-Solvers</a></li><li><a class="tocitem" href="../Bibliography/">Bibliography</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>ModeSolvers-Tutorial</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>ModeSolvers-Tutorial</a></li></ul></nav><div class="docs-right"><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="OpticalFibers.ModeSolvers-Tutorial"><a class="docs-heading-anchor" href="#OpticalFibers.ModeSolvers-Tutorial">OpticalFibers.ModeSolvers - Tutorial</a><a id="OpticalFibers.ModeSolvers-Tutorial-1"></a><a class="docs-heading-anchor-permalink" href="#OpticalFibers.ModeSolvers-Tutorial" title="Permalink"></a></h1><h2 id="Bimodal-Step-index-Fiber"><a class="docs-heading-anchor" href="#Bimodal-Step-index-Fiber">Bimodal Step-index Fiber</a><a id="Bimodal-Step-index-Fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Bimodal-Step-index-Fiber" title="Permalink"></a></h2><p>This section explains how to modelize a step-index fiber with a core radius <span>$a=2$</span> µm. The refractive index of the core is <span>$n_{\text{core}}=1.47$</span> and that of the cladding is <span>$n_{\text{cladding}}=1.45$</span>. </p><p>This fiber is bimodal at <span>$\lambda=1$</span> µm since the normalized frequency is <span>$V=\frac{2\pi a}{\lambda}\sqrt{n_{\text{core}}^2-n_{\text{cladding}}^2}=3.04$</span>. </p><h3 id="Scalar-Modes"><a class="docs-heading-anchor" href="#Scalar-Modes">Scalar Modes</a><a id="Scalar-Modes-1"></a><a class="docs-heading-anchor-permalink" href="#Scalar-Modes" title="Permalink"></a></h3><p>To compute the two scalar modes, we can use the fuction <code>multi_step_fiber_modes</code> that returns a vector of modes. The arguments are the wavelength, the azimuthal number, the radius of the core and a vector describing the refractive index. The optional argument <code>field</code> indicates that we want to return modes that contain a field.</p><pre><code class="language-julia hljs">using OpticalFibers, OpticalFibers.ModeSolvers
+m0=multi_step_fiber_modes(1u&quot;µm&quot;,0,2u&quot;µm&quot;,[1.47,1.45],field=true);
+m01=m0[1]
+m1=multi_step_fiber_modes(1u&quot;µm&quot;,1,2u&quot;µm&quot;,[1.47,1.45],field=true);
+m11=m1[1]</code></pre><p>Note that you can also use broadcasting to compute all modes with a single command. The function <code>Ref</code> allows to use the same vector of refractive index for all values of the azimuthal number. </p><pre><code class="language-julia hljs">m=multi_step_fiber_modes.(1u&quot;µm&quot;,[0,1],2u&quot;µm&quot;,Ref([1.47,1.45]),field=true);
+m01=m[1][1];
+m11=m[2][1];</code></pre><p>The mode profile can be easily plotted:</p><pre><code class="language-julia hljs">using Plots
+r=(0:0.01:10)*1u&quot;µm&quot;;
+plot(r,m01.EMField.E(r),label=m01.Name)
+plot!(r,m11.EMField.E(r),label=m11.Name)</code></pre><img src="df2eaea8.svg" alt="Example block output"/><p>In order to visualize the modes in a 2D plot, we can convert the <code>Mode{ScalarFieldFunction1D}</code> to a <code>Mode{ScalarFieldFunction2D}</code> but we have to indicate the orientation of the mode by using the <code>cos</code> function or the <code>sin</code> function. Then, we normalize the modes and plot one of the two LP<span>$_{11}$</span> modes. Be careful when using <code>Plots.jl</code>: unlike this package, the second index of the matrix corresponds to the x-coordinate (as matlab but the opposite of <code>Makie.jl</code>).</p><pre><code class="language-julia hljs">mm01=convertTo2D(m01)
+mm11c=convertTo2D(m11)
+mm11s=convertTo2D(m11,90)
+mm01=normalize(mm01)
+mm11c=normalize(mm11c)
+mm11s=normalize(mm11s)
+x=(-8:0.125:8)*1u&quot;µm&quot;;
+contourf(x,x,mm11c.EMField.E(x,x)&#39;,levels=100,linewidth=0)</code></pre><img src="422b1602.svg" alt="Example block output"/><p>The beating between the LP<span>$_{01}$</span> and the LP<span>$_{11}$</span> can be observed by plotting the sum of the fields for different values of the distance <span>$z$</span>. The beating length is <span>$\frac{2\pi}{\vert \Delta \beta \vert} = \frac{\lambda}{\vert \Delta n_{eff} \vert}\simeq 107$</span> µm</p><pre><code class="language-julia hljs">L=1u&quot;µm&quot;/(m01.neff-m11.neff)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">106.89413338381357 μm</code></pre><p>We can take advantage of the possibility to add fields to create the animation.</p><pre><code class="language-julia hljs">anim=@animate for j=0:107
+    TotalField=getEMField(mm01,j*2u&quot;µm&quot;)+getEMField(mm11c,j*2u&quot;µm&quot;);
+    contourf(x,x,abs2.(TotalField.E(x,x))&#39;,levels=100,linewidth=0,title=&quot;z = $(2*j) µm&quot;)
+end;
+gif(anim,&quot;anim_field.gif&quot;,fps=15)</code></pre><img src="b36c565f.gif" alt="Example block output"/><h3 id="Vector-modes"><a class="docs-heading-anchor" href="#Vector-modes">Vector modes</a><a id="Vector-modes-1"></a><a class="docs-heading-anchor-permalink" href="#Vector-modes" title="Permalink"></a></h3><p>It is also possible to compute the vector modes of the fiber: LP<span>$_{01}$</span> mode becomes HE<span>$_{11}$</span> mode and LP<span>$_{11}$</span> mode becomes TE<span>$_{01}$</span>, TM<span>$_{01}$</span> and HE<span>$_{21}$</span> modes. To compute these modes, we just have to set the argument <code>type</code> to <code>:Vector</code> (its default value is <code>:Scalar</code>).</p><pre><code class="language-julia hljs">mv0=multi_step_fiber_modes(1u&quot;µm&quot;,0,2u&quot;µm&quot;,[1.47,1.45],field=true,type=:Vector)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [TE 0,1 - neff = 1.4538242972550153 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [TM 0,1 - neff = 1.4537675924414297 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><pre><code class="language-julia hljs">mv1=multi_step_fiber_modes(1u&quot;µm&quot;,1,2u&quot;µm&quot;,[1.47,1.45],field=true,type=:Vector)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [HE 1,1a - neff = 1.4631371608572663 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [HE 1,1b - neff = 1.4631371608572663 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><pre><code class="language-julia hljs">mv2=multi_step_fiber_modes(1u&quot;µm&quot;,2,2u&quot;µm&quot;,[1.47,1.45],field=true,type=:Vector)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [HE 2,1a - neff = 1.4537386807206427 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [HE 2,1b - neff = 1.4537386807206427 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><p>Then, the Poynting vector of the mode HE<span>$_{21}$</span> can be computed and plotted.</p><pre><code class="language-julia hljs">contourf(x,x,(mv2[1].EMField.Pz(x,x))&#39;,linewidth=0,levels=100,xlims=(-4u&quot;µm&quot;,4u&quot;µm&quot;),ylims=(-4u&quot;µm&quot;,4u&quot;µm&quot;))
+xc=x[1:4:end];
+X,Y=meshgrid(xc);
+quiver!(X,Y,quiver=(real(mv2[1].EMField.Ex(xc,xc)&#39;/20u&quot;V/m&quot;),real(mv2[1].EMField.Ey(xc,xc)&#39;/20u&quot;V/m&quot;)),color=:cyan,arrow=arrow(:closed))</code></pre><img src="af3f950e.svg" alt="Example block output"/><p>In order to check the orthoganality of the modes, we can normalize them and compute the overlap integrals:</p><pre><code class="language-julia hljs">mv=[mv1;mv0;mv2];
+mv=normalize.(mv);
+overlap.(mv,transpose(mv))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6×6 Matrix{ComplexF64}:
+          1.0+0.0im  4.01649e-20+0.0im  …   -1.6337e-17+0.0im
+  4.01649e-20+0.0im          1.0+0.0im       1.6337e-17+0.0im
+ -4.26367e-17+0.0im  2.95168e-17+0.0im     -1.59944e-17+0.0im
+  3.03805e-18+0.0im  4.23976e-17+0.0im     -6.70105e-17+0.0im
+  1.62839e-17+0.0im  1.62839e-17+0.0im      1.49081e-20+0.0im
+  -1.6328e-17+0.0im   1.6328e-17+0.0im  …           1.0+0.0im</code></pre><h3 id="Scalar-modes-with-FEM1D"><a class="docs-heading-anchor" href="#Scalar-modes-with-FEM1D">Scalar modes with FEM1D</a><a id="Scalar-modes-with-FEM1D-1"></a><a class="docs-heading-anchor-permalink" href="#Scalar-modes-with-FEM1D" title="Permalink"></a></h3><p>We can find the results above using the FEM method. We will start with the 1D method since the fiber has a cylindrical symmetry. The mesh must begin at <span>$r=0$</span> and we have set its end at 15 µm. The number of elements is set to 1500. We indicate to the the FEM solver that we want to compute 4 eigenvalues but it returns only one since there is only one mode for <span>$\ell=0$</span>.</p><pre><code class="language-julia hljs">model = CartesianDiscreteModel((0,15),1500)
+RIP=x-&gt;1.47-0.02*(x[1]&gt;=2u&quot;µm&quot;)
+m0FEM=FEM1D(1u&quot;µm&quot;,0,RIP,model*u&quot;µm&quot;,field=true,neigs=4)
+m0FEM=normalize.(m0FEM)
+m0=normalize.(m0)
+plot(r,m0[1].EMField.E(r),label=&quot;Step-index solver&quot;)
+plot!(r,-m0FEM[1].EMField.E(r),label=&quot;FEM1D solver&quot;,line=:dash)</code></pre><img src="7b5618d2.svg" alt="Example block output"/><h3 id="Scalar-modes-with-FEM2D"><a class="docs-heading-anchor" href="#Scalar-modes-with-FEM2D">Scalar modes with FEM2D</a><a id="Scalar-modes-with-FEM2D-1"></a><a class="docs-heading-anchor-permalink" href="#Scalar-modes-with-FEM2D" title="Permalink"></a></h3><p>We can also use the FEM2D method. For this, we use a mesh created with GMSH and a function of the tuple <span>$(x,y)$</span> that describes the refractive index profile. We ask the solver to find 4 modes but it returns only 3 because the fiber can only guides the modes LP01, LP11a and LP11b (a and b refer to the orientation of the mode).</p><pre><code class="language-julia hljs">model = GmshDiscreteModel(&quot;../../models/example1.msh&quot;);
+RIP2D=x-&gt;1.47-0.02*(hypot(x[1],x[2])&gt;=2u&quot;µm&quot;)
+mFEM2D=FEM2D(1*u&quot;µm&quot;,RIP2D,model*u&quot;µm&quot;,field=true,neigs=4)
+mFEM2D=normalize.(mFEM2D);
+p1=contourf(x,x,mFEM2D[1].EMField.E(x,x)&#39;,levels=50,linewidth=0,aspect_ratio=:equal);
+p2=contourf(x,x,mFEM2D[2].EMField.E(x,x)&#39;,levels=50,linewidth=0,aspect_ratio=:equal);
+p3=contourf(x,x,mFEM2D[3].EMField.E(x,x)&#39;,levels=50,linewidth=0,aspect_ratio=:equal);
+plot(p1, p2, p3, layout=(1,3), legend=false,size=(900,300))</code></pre><img src="c9544ec1.svg" alt="Example block output"/><p>Note that there is no preferential orientation for the LP<span>$_{11}$</span> modes given by the FEM solver. We can check that the modes given by the quasi-analytical solver and the FEM solver are the same by computing the overlap integrals:</p><pre><code class="language-julia hljs">abs2.(overlap.(mFEM2D,[mm01 mm11c mm11s]))</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">3×3 Matrix{Float64}:
+ 0.999992     1.28064e-10  9.36073e-13
+ 8.13385e-12  0.253027     0.746962
+ 2.81526e-11  0.747542     0.252445</code></pre><h3 id="Vector-modes-with-FEM2D"><a class="docs-heading-anchor" href="#Vector-modes-with-FEM2D">Vector modes with FEM2D</a><a id="Vector-modes-with-FEM2D-1"></a><a class="docs-heading-anchor-permalink" href="#Vector-modes-with-FEM2D" title="Permalink"></a></h3><p>To compute the vector, we just have to set <code>type</code> to <code>:Vector</code>. We ask the solver to find 8 modes but it returns only 6 because the fiber can only guides 2 modes HE<span>$_{11}$</span>, 1 mode becomes TE<span>$_{01}$</span>, 1 mode TM<span>$_{01}$</span> and 2 modes HE<span>$_{21}$</span>. </p><pre><code class="language-julia hljs">mvFEM2D=FEM2D(1*u&quot;µm&quot;,RIP2D,model*u&quot;µm&quot;,field=true,neigs=8,type=:Vector)
+mvFEM2D=normalize.(mvFEM2D)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">6-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode 1 - neff = 1.4631338799417186 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode 2 - neff = 1.4631338799412166 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode 3 - neff = 1.4538177524131521 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode 4 - neff = 1.453761291572448 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode 5 - neff = 1.4537322121229255 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode 6 - neff = 1.453732212122792 - λ = 1 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><p>We can verify that the modes given by the quasi-analytical solver and the FEM solver are the same by plotting the fields.</p><pre><code class="language-julia hljs">p1=contourf(x,x,real(mvFEM2D[4].EMField.Ex(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Ex&quot;);
+p2=contourf(x,x,real(mvFEM2D[4].EMField.Ey(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Ey&quot;);
+p3=contourf(x,x,imag(mvFEM2D[4].EMField.Ez(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Ez&quot;);
+p4=contourf(x,x,real(mvFEM2D[4].EMField.Hx(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Hx&quot;);
+p5=contourf(x,x,real(mvFEM2D[4].EMField.Hy(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Hy&quot;);
+p6=contourf(x,x,imag(mvFEM2D[4].EMField.Hz(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Hz&quot;);
+plot(p1, p2, p3, p4, p5, p6, layout=(2,3), legend=false,size=(900,600))</code></pre><img src="b18838e0.svg" alt="Example block output"/><pre><code class="language-julia hljs">p1=contourf(x,x,real(mv[4].EMField.Ex(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Ex&quot;);
+p2=contourf(x,x,real(mv[4].EMField.Ey(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Ey&quot;);
+p3=contourf(x,x,imag(mv[4].EMField.Ez(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Ez&quot;);
+p4=contourf(x,x,real(mv[4].EMField.Hx(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Hx&quot;);
+p5=contourf(x,x,real(mv[4].EMField.Hy(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Hy&quot;);
+p6=contourf(x,x,imag(mv[4].EMField.Hz(x,x)&#39;),levels=50,linewidth=0,aspect_ratio=:equal,title=&quot;Hz&quot;);
+plot(p1, p2, p3, p4, p5, p6, layout=(2,3), legend=false,size=(900,600))</code></pre><img src="d28d9c6c.svg" alt="Example block output"/><h2 id="Gradient-index-fiber-and-dispersion"><a class="docs-heading-anchor" href="#Gradient-index-fiber-and-dispersion">Gradient index fiber and dispersion</a><a id="Gradient-index-fiber-and-dispersion-1"></a><a class="docs-heading-anchor-permalink" href="#Gradient-index-fiber-and-dispersion" title="Permalink"></a></h2><p>In this tutorial, a germanium-doped parabolic gradient index fiber will be studied. The maximum Ge concentration is 20% and the core radius is 3.5 µm. The silica dispersion will be taken into account.</p><p>First, a vector of <code>Function</code> is created to modelized the dispersive refractive index profile between 1 and 1.5 µm:</p><pre><code class="language-julia hljs">using Plots, OpticalFibers, OpticalFibers.PhysicalData, OpticalFibers.ModeSolvers
+lambda=(1:0.01:1.5)u&quot;µm&quot;;
+RIP=[x-&gt;n_Ge_Doped_Silica(l,0)+(n_Ge_Doped_Silica(l,0.2)-n_Ge_Doped_Silica(l,0))*(x[1]&lt;=3.5u&quot;µm&quot;)*(1-x[1]^2/(3.5u&quot;µm&quot;)^2) for l in lambda];
+r=(0:0.1:5)u&quot;µm&quot;;
+plot(r,RIP[1].(r),label=&quot;λ = 1 µm&quot;,xlabel=&quot;r (µm)&quot;,ylabel=&quot;Refractive index&quot;)
+plot!(r,RIP[end].(r),label=&quot;λ = 1.5 µm&quot;)</code></pre><img src="d05cf76c.svg" alt="Example block output"/><p>The modal content is then computed (note that we must use Ref(model) because length(model) is not defined in Gridap):</p><pre><code class="language-julia hljs">model = CartesianDiscreteModel((0,20),2000)
+m=FEM1D.(lambda,[0,1,2]&#39;,RIP,Ref(model*u&quot;µm&quot;),neigs=2);
+#mode LP01 always exists
+neff01=[real(m[j,1][1].neff) for j in 1:length(lambda)];
+N02=sum((length.(m[:,1])).&gt;=2);
+neff02=[real(m[j,1][2].neff) for j in 1:N02];
+N11=sum((length.(m[:,2])).&gt;=1);
+neff11=[real(m[j,2][1].neff) for j in 1:N11];
+N21=sum((length.(m[:,3])).&gt;=1);
+neff21=[real(m[j,3][1].neff) for j in 1:N21];
+plot(lambda,n_Ge_Doped_Silica.(lambda,0),label=&quot;Silica&quot;,xlabel=&quot;λ&quot;,ylabel=&quot;Effective index&quot;,color=:black);
+plot!(lambda,n_Ge_Doped_Silica.(lambda,0.2),label=&quot;Ge-doped Silica (20%)&quot;,color=:black,line=:dash);
+plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=[&quot;LP01&quot; &quot;LP11&quot; &quot;LP02&quot; &quot;LP21&quot;])</code></pre><img src="a377c2ee.svg" alt="Example block output"/><p>The second-order dispersion is defined by <span>$\beta_2=\frac{\partial^2 \beta}{\partial \omega^2}$</span>.</p><pre><code class="language-julia hljs">beta01=neff01*2*pi./lambda;
+omega=2*pi*OpticalFibers.PhysicalData.c_Unitful./lambda
+omega2,beta2=derivative((omega,beta01),2);
+lambda2=2*pi*OpticalFibers.PhysicalData.c_Unitful./omega2;
+plot(lambda2,uconvert.(u&quot;ps^2/km&quot;,beta2),xlabel=&quot;λ&quot;,ylabel=&quot;β₂&quot;,label=&quot;LP01&quot;)</code></pre><img src="97ad2523.svg" alt="Example block output"/><p>To compute the effective area and the non-linear coefficient of the fundamental mode, the fields must be calculated:</p><pre><code class="language-julia hljs">m=FEM1D.(lambda,0,RIP,Ref(model*u&quot;µm&quot;),field=true);
+m=[m[i][1] for i in 1:length(lambda)];
+A=Aeff.(m);
+gamma=nonLinearCoefficient.(m,2.53E-20u&quot;m^2/W&quot;)
+plot(lambda,A,label=&quot;Aeff&quot;,ylabel=&quot;Effective area&quot;,xlabel=&quot;λ&quot;,color=:blue,leg=:topright);
+plot!(twinx(),lambda,uconvert.(u&quot;W^-1*km^-1&quot;,gamma),label=&quot;γ&quot;,ylabel=&quot;Non-linear coefficient&quot;,color=:red,leg=:topleft)</code></pre><img src="8642c1c6.svg" alt="Example block output"/><h2 id="Leaky-modes-in-step-index-fiber-with-a-low-index-trench"><a class="docs-heading-anchor" href="#Leaky-modes-in-step-index-fiber-with-a-low-index-trench">Leaky modes in step index fiber with a low index trench</a><a id="Leaky-modes-in-step-index-fiber-with-a-low-index-trench-1"></a><a class="docs-heading-anchor-permalink" href="#Leaky-modes-in-step-index-fiber-with-a-low-index-trench" title="Permalink"></a></h2><h3 id="Circular-core"><a class="docs-heading-anchor" href="#Circular-core">Circular core</a><a id="Circular-core-1"></a><a class="docs-heading-anchor-permalink" href="#Circular-core" title="Permalink"></a></h3><p>In this example, we study a fiber with the parameters below:</p><ul><li>core with a radius of 4 µm and a refractive index of 1.46</li><li>a trench located between 4 µm and 7 µm with a refractive index of 1.41</li><li>a cladding with a refractive index of 1.45</li></ul><p>In order to compute the leaky scalar modes at <span>$\lambda=1.6$</span> µm, a PML must be added when using a FEM solver. In this example, the PML is located between 12 µm and 15 µm (thickness of 3 µm).</p><pre><code class="language-julia hljs">using Plots, OpticalFibers, OpticalFibers.ModeSolvers
+RIP=x-&gt;1.46-0.05*(x[1]&gt;=4u&quot;µm&quot;)+0.04*(x[1]&gt;7u&quot;µm&quot;);
+model = CartesianDiscreteModel((0,15),1500)
+m0=FEM1D(1.6u&quot;µm&quot;,0,RIP,model*u&quot;µm&quot;,field=true,dPML=3u&quot;µm&quot;,neigs=10)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">10-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.ScalarFiberEMField1D}}:
+ [Mode LP n°1 - neff = 1.4541423643307 + 6.314171975836011e-10im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°2 - neff = 1.4531730732044528 + 0.003992361248534444im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°3 - neff = 1.4502897353690323 + 0.0006416936437421244im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°4 - neff = 1.444840814109183 + 0.005072664091952557im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°5 - neff = 1.4299693817878851 + 3.863247385163759e-5im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°6 - neff = 1.4284719091829994 + 0.012230052062825191im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°7 - neff = 1.4003435812279699 + 0.018085998014570507im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°8 - neff = 1.4600349020404595 + 0.010181223518786427im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°9 - neff = 1.4853884842593634 + 0.02909184099514004im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]
+ [Mode LP n°10 - neff = 1.4708079397691918 + 0.018594353661980253im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField1D]</code></pre><p>The LP<span>$_{01}$</span> mode is the mode 1. Since its effective index is greater than the refractive index of the cladding, this mode is guided and its losses are not significant.</p><p>The LP<span>$_{02}$</span> mode is the mode 5, its losses in dB/km can be calculated:</p><pre><code class="language-julia hljs">m0[5].losses</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">[1.317730845339689e6 dB] km^-1</code></pre><pre><code class="language-julia hljs">r=(0:0.01:15)u&quot;µm&quot;
+m0=normalize.(m0)
+plot(r,real(m0[1].EMField.E(r)),xlabel=&quot;r&quot;,ylabel=&quot;real(E)&quot;,label=&quot;LP01&quot;)
+plot!(r,-real(m0[5].EMField.E(r)),label=&quot;LP02&quot;)</code></pre><img src="2c8bab09.svg" alt="Example block output"/><p>We can also compute the effective index of the LP<span>$_{11}$</span> mode:</p><pre><code class="language-julia hljs">m1=FEM1D(1.6u&quot;µm&quot;,1,RIP,model*u&quot;µm&quot;,field=true,dPML=3u&quot;µm&quot;,neigs=15);
+pos=argmin(getproperty.(m1,:losses))
+m1[pos].neff</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1.4452245032447493 + 2.386041891227977e-6im</code></pre><p>To compute the four leaky vector modes that correspond to the LP<span>$_{11}$</span> mode, we can also add a PML to the FEM2D solver:</p><pre><code class="language-julia hljs">model = GmshDiscreteModel(&quot;../../models/Step_index_fiber_pml.msh&quot;);
+RIP2D=x-&gt;RIP(hypot(x[1],x[2]));
+m=FEM2D(1.6u&quot;µm&quot;,RIP2D,model*u&quot;µm&quot;,field=true,neigs=4,approx_neff=real(m1[pos].neff),dPML=3u&quot;µm&quot;,type=:Vector)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode n°1 - neff = 1.445200656579831 + 2.375486421091163e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°2 - neff = 1.4450417028545666 + 2.3770896316928287e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°3 - neff = 1.4450417027953948 + 2.377089601324764e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°4 - neff = 1.4449793153896542 + 2.3513681768046443e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><p>The field can be plotted using GridapMakie:</p><pre><code class="language-julia hljs">using GridapMakie, GLMakie
+fig,ax,plot_obj=GLMakie.plot(get_triangulation(m[1].EMField.Ex),real(m[1].EMField.Ex.value),axis=(aspect=DataAspect(),),colormap=:jet)
+Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM_PML_Ex.png" alt="Real(Ex) for the first mode"/></p><h3 id="Elliptical-core"><a class="docs-heading-anchor" href="#Elliptical-core">Elliptical core</a><a id="Elliptical-core-1"></a><a class="docs-heading-anchor-permalink" href="#Elliptical-core" title="Permalink"></a></h3><p>In this example, the fiber is similar to the previous one but the core and the trench are elliptic:</p><ul><li>core with a radius of 4 µm in the x direction and 2 µm in the y direction and a refractive index of 1.46</li><li>a trench with a refractive index of 1.41 and located between the core and an ellipse with radii 8 and 4 µm in x and y direction respectively</li><li>a cladding with a refractive index of 1.45</li></ul><p><img src="../assets/Elliptic_profile.png" alt="Elliptic Fiber RIP"/></p><p>A rectangular PML is added for <span>$12&lt;\vert x \vert &lt; 15$</span> µm and <span>$8&lt;\vert x \vert &lt; 11$</span> µm to compute the leaky modes.</p><p>We can compute the modes in the scalar approximation or the vector modes. The results are similar since the refractive index steps are very low.</p><pre><code class="language-julia hljs">model2 = GmshDiscreteModel(&quot;../../models/Elliptic_fiber_rectangular_pml.msh&quot;);
+RIP2=x-&gt;1.46-0.05*(x[1]^2/16u&quot;µm^2&quot;+x[2]^2/4u&quot;µm^2&quot;&gt;=1)+0.04*(x[1]^2/64u&quot;µm^2&quot;+x[2]^2/16u&quot;µm^2&quot;&gt;1)
+using MUMPS
+m_scalar=FEM2D(1.6u&quot;µm&quot;,RIP2,model2*u&quot;µm&quot;,neigs=2,approx_neff=1.44,field=true,solver=:MUMPS,dPML=3u&quot;µm&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.ScalarFiberEMField2D}}:
+ [Mode LP n°1 - neff = 1.4384931591706385 + 3.714123156418633e-5im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField2D]
+ [Mode LP n°2 - neff = 1.4484494924542484 + 8.560590357539656e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.ScalarFiberEMField2D]</code></pre><pre><code class="language-julia hljs">m_vector=FEM2D(1.6u&quot;µm&quot;,RIP2,model2*u&quot;µm&quot;,neigs=4,approx_neff=1.44,field=true,solver=:MUMPS,dPML=3u&quot;µm&quot;,type=:Vector)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode n°1 - neff = 1.4383309120868248 + 3.791806821998137e-5im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°2 - neff = 1.4381451874788798 + 3.790660593733173e-5im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°3 - neff = 1.448394575958938 + 8.76846150945505e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°4 - neff = 1.448167956804184 + 9.44249423583662e-6im - λ = 1.6 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><p>The first mode can be saved in a file that can be opened with ParaView:</p><pre><code class="language-julia hljs">writevtk(&quot;mode1&quot;,m_vector[1]);</code></pre><p><img src="../assets/Elliptic_Ex.png" alt="Elliptic Fiber Ex"/></p><h2 id="Bent-fiber"><a class="docs-heading-anchor" href="#Bent-fiber">Bent fiber</a><a id="Bent-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Bent-fiber" title="Permalink"></a></h2><p>In this example, we will compute the bending losses of a step-index fiber at a wavelength of 1.55 µm. The core of the fiber has a refractive index of 1.4457 and a radius of 3.5 µm. The refractive index of the cladding is 1.4378.</p><p>First, we can use the step-index solver to calculate the effective index. Then, the approximate formula given in the Snyder &amp; Love [<a href="../Bibliography/#SnyderLove_1983">6</a>] (Formula 23-23, page 481) can be used to compute the attenuation coefficient <span>$\gamma=2*Im(\beta)$</span>:</p><pre><code class="language-julia hljs">using Bessels, OpticalFibers, OpticalFibers.ModeSolvers
+lambda=1.55u&quot;µm&quot;
+ncore=1.4457
+ncladding=1.4378
+rho=3.5u&quot;µm&quot;
+delta=(ncore^2-ncladding^2)/(2*ncore^2)
+V=2*pi*rho/lambda*sqrt(ncore^2-ncladding^2)
+ms0=multi_step_fiber_modes(lambda,0,rho,[ncore,ncladding])
+neff=ms0[1].neff
+U=2*pi*rho/lambda*sqrt(ncore^2-neff^2)
+W=2*pi*rho/lambda*sqrt(neff^2-ncladding^2)
+gamma=x-&gt;sqrt(pi)/2/rho*sqrt(rho/x)*U^2/V^2/W^(1.5)/(besselk(1,W)^2)*exp(-4/3*x/rho*W^3/V^2*delta)
+neff</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1.4414392004035022</code></pre><p>To compute losses with FEM in the scalar approximation and neglecting the elasto-optics effect, we must add a PML and multiply the refractive index by <span>$(1+x/Rc)$</span> with <span>$Rc$</span> the bending radius. Note that the cladding must be large enough to contain the turning point (point at which the refractive index equals the effective index): in the case studied here, the cladding outer radius must be at least 25 µm for a bent radius of 10 mm. Then, we construct a model with a PML located between 32 and 35 µm.</p><p>We first compute the effective index with the FEM2D function to check that we obtain the same value as with the step-index solver.</p><pre><code class="language-julia hljs">model = GmshDiscreteModel(&quot;../../models/example5.msh&quot;);
+RIP2D=x-&gt;ncore-(ncore-ncladding)*(hypot(x[1],x[2])&gt;=rho)
+mFEM2D=FEM2D(lambda,RIP2D,model*u&quot;µm&quot;,field=true,neigs=1);
+neff0=mFEM2D[1].neff</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">1.4414375200134855</code></pre><p>Then we calculate modes and the attenuation coefficent for Rc between 1 and 10 mm. Note that we use threads to accelerate the computation (this is not possible when using the MUMPS solver because it uses its own threads system and this causes an error).</p><pre><code class="language-julia hljs">RcFEM=(1:1:10)u&quot;mm&quot;
+gammaFEM=zeros(length(RcFEM))*u&quot;m^-1&quot;
+mFEM=Vector{Mode}(undef,length(RcFEM))
+Threads.@threads for i in axes(RcFEM,1)
+    RIP2D_bent=x-&gt;RIP2D(x)*(1+x[1]/RcFEM[i])
+    mFEM2D_bent=FEM2D(lambda,RIP2D_bent,model*u&quot;µm&quot;,neigs=1,dPML=3u&quot;µm&quot;,approx_neff=neff0,field=true);
+    mFEM[i]=mFEM2D_bent[1]
+    gammaFEM[i]=mFEM2D_bent[1].alpha;
+end
+using Plots
+Rc=(1:0.01:10)u&quot;mm&quot;
+plot(Rc,uconvert.(u&quot;m^-1&quot;,gamma.(Rc)),yaxis=:log,xlabel=&quot;Rc&quot;,ylabel=&quot;γ&quot;,label=&quot;Snyder &amp; Love&quot;)
+plot!(RcFEM,uconvert.(u&quot;m^-1&quot;,gammaFEM),label=&quot;FEM2D&quot;)</code></pre><img src="d7df5b27.svg" alt="Example block output"/><p>The value given by FEM2D is slighlty different from that predicted by the analytical formula and the difference increases as the bent radius decreases because the mode increasingly distorted.</p><pre><code class="language-julia hljs">using GridapMakie
+using GLMakie
+fig=GLMakie.Figure(size=(750,250))
+fig1,ax1=GLMakie.plot(fig[1,1],get_triangulation(mFEM[10].EMField.E),abs(mFEM[10].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
+fig2,ax2=GLMakie.plot(fig[1,2],get_triangulation(mFEM[3].EMField.E),abs(mFEM[3].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
+fig3,ax3=GLMakie.plot(fig[1,3],get_triangulation(mFEM[1].EMField.E),abs(mFEM[1].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
+fig1.title=&quot;Rc = 10 mm&quot;
+fig2.title=&quot;Rc = 3 mm&quot;
+fig3.title=&quot;Rc = 1 mm&quot;</code></pre><p><img src="../Bent_fiber.png" alt="Electric field in the bent fiber"/></p><p>In the case of vector modes, we can also multiply the refractive index by <span>$(1+x/Rc)$</span> but, more rigourously, we have to multiply the permittivity and permeability tensors by <span>$\left(\begin{matrix} (1+x/Rc) &amp; 0 &amp; 0\\
+0 &amp; (1+x/Rc) &amp; 0 \\ 0 &amp; 0 &amp; (1+x/Rc)^{-1} \end{matrix}\right)$</span>. Below, we compute the modes of the fiber with a bent radius of 3 mm.</p><pre><code class="language-julia hljs">R=3u&quot;mm&quot;;
+epsilon2D=x-&gt;RIP2D(x)^2
+eps_anisotrope=x-&gt;diagonal_tensor(VectorValue(epsilon2D(x)*(1+x[1]/R),epsilon2D(x)*(1+x[1]/R),epsilon2D(x)/(1+x[1]/R)))
+mu_anisotrope=x-&gt;diagonal_tensor(VectorValue(1+x[1]/R,1+x[1]/R,1.0/(1+x[1]/R)))
+eps_anisotrope_pml=add_cylindrical_PML(eps_anisotrope,32u&quot;µm&quot;,3u&quot;µm&quot;,10)
+mu_anisotrope_pml=add_cylindrical_PML(mu_anisotrope,32u&quot;µm&quot;,3u&quot;µm&quot;,10)
+t=FEM2D_anisotropic(lambda,eps_anisotrope_pml,mu_anisotrope_pml,model*u&quot;µm&quot;,approx_neff=neff0,neigs=2,field=true,solver=:MUMPS)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">2-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode n°1 - neff = 1.4416768500609753 + 3.605365384399375e-5im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°2 - neff = 1.441676596483181 + 3.5981430748593146e-5im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><h2 id="Twisted-fiber"><a class="docs-heading-anchor" href="#Twisted-fiber">Twisted fiber</a><a id="Twisted-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Twisted-fiber" title="Permalink"></a></h2><p>The method used to compute the modes of an isotropic fiber is described in a paper written by Nicolet et al. [<a href="../Bibliography/#Nicolet2007">7</a>]. In the following example, we use the same fiber as in the bent fiber example but instead of being bent, the fiber is twisted with a period of <span>$P=2$</span> mm.</p><pre><code class="language-julia hljs">eps_twist=OpticalFibers.add_twist_PML(epsilon2D,2u&quot;mm&quot;,32u&quot;µm&quot;,3u&quot;µm&quot;,10)
+mu_twist=add_twist_PML(1,2u&quot;mm&quot;,32u&quot;µm&quot;,3u&quot;µm&quot;,10)
+using MUMPS
+t=FEM2D_anisotropic(lambda,eps_twist,mu_twist,model*u&quot;µm&quot;,approx_neff=neff0,neigs=20,field=true,solver=:MUMPS)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">20-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode n°1 - neff = 1.441116478637129 + 0.000347248559905135im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°2 - neff = 1.4406496405380824 - 4.205032020534427e-15im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°3 - neff = 1.440516316886298 + 0.00023852566396397734im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°4 - neff = 1.4406239467982653 + 0.0006493372480277297im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°5 - neff = 1.4401130996534655 + 0.00048588657220545797im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°6 - neff = 1.439885506957872 + 0.0001487973137747651im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°7 - neff = 1.439568481049614 + 0.00034301257347264623im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°8 - neff = 1.4401729872342346 + 0.0009342554924734575im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°9 - neff = 1.4397306393979732 + 0.0007271839681591102im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°10 - neff = 1.4411016891022055 + 0.0008333811876821536im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°11 - neff = 1.4405808148306596 + 0.0011628463677221322im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°12 - neff = 1.4409546587995083 + 0.0014126830602933505im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°13 - neff = 1.44129494270085 + 0.0016835269042102087im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°14 - neff = 1.4415468289689204 + 0.0010377352584137532im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°15 - neff = 1.4419597611950496 + 0.001262173779004853im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°16 - neff = 1.442340806265491 + 0.0015065187110042272im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°17 - neff = 1.4427368707323187 + 0.0007855962822025097im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°18 - neff = 1.4422264792825732 + 0.000620942629386255im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°19 - neff = 1.441686428095528 + 0.00047478165999191785im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°20 - neff = 1.4422023358137879 + 2.5324642538565372e-15im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><p>Modes 2 and 20 are the HE<span>$_{11}$</span> modes. The losses are not significant since the twist has no effect on a circular centered core. However, the effective indices are no more degenerate: as explained by Napiorkowski et al. [<a href="../Bibliography/#Napiorkowski_2014">8</a>], in the helicoidal coordinates system, the effective index is neff<span>$\pm\frac{\nu \lambda}{P}$</span> with <span>$\nu$</span> the azimuthal number (<span>$\nu=1$</span> for the HE<span>$_{11}$</span> mode).</p><p>If the core is shifted by 10 µm, losses due to the twist appear:</p><pre><code class="language-julia hljs">epsilon2D_shift=x-&gt;(ncore-(ncore-ncladding)*(hypot(x[1]-10u&quot;µm&quot;,x[2])&gt;=rho))^2
+eps_shift_twist=OpticalFibers.add_twist_PML(epsilon2D_shift,2u&quot;mm&quot;,32u&quot;µm&quot;,3u&quot;µm&quot;,10)
+model_shift = GmshDiscreteModel(&quot;../../models/example5-decale.msh&quot;);
+t=FEM2D_anisotropic(lambda,eps_shift_twist,mu_twist,model_shift*u&quot;µm&quot;,approx_neff=neff0,neigs=20,field=true,solver=:MUMPS)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">20-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode n°1 - neff = 1.441379103322331 + 1.865106174841521e-8im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°2 - neff = 1.4411166749467659 + 0.00034768563131345375im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°3 - neff = 1.4405165892026444 + 0.00024009412189910777im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°4 - neff = 1.4406226703477496 + 0.0006517837231195001im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°5 - neff = 1.4401098591345916 + 0.0004920816320668495im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°6 - neff = 1.4398849115984167 + 0.000154188081626798im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°7 - neff = 1.4395593985811845 + 0.00036012310726619946im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°8 - neff = 1.4401619508400203 + 0.0009396720569333117im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°9 - neff = 1.4397063013748317 + 0.0007390385489639592im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°10 - neff = 1.4411012371236334 + 0.0008344974450728263im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°11 - neff = 1.440576014595435 + 0.0011662417501328711im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°12 - neff = 1.4409529937173065 + 0.0014146806283231697im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°13 - neff = 1.4412945583603798 + 0.001684485158460397im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°14 - neff = 1.4415467317860648 + 0.0010382334429258377im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°15 - neff = 1.4419597677701543 + 0.0012623651468038003im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°16 - neff = 1.4423408241537403 + 0.0015065792228072207im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°17 - neff = 1.4427368809337107 + 0.0007856141930468821im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°18 - neff = 1.4429317831469288 + 1.8411842438146942e-8im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°19 - neff = 1.4422265177834752 + 0.0006209928091303851im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°20 - neff = 1.4416865208143612 + 0.00047491825978965513im - λ = 1.55 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><h2 id="Photonic-crystal-fiber-(PCF)"><a class="docs-heading-anchor" href="#Photonic-crystal-fiber-(PCF)">Photonic crystal fiber (PCF)</a><a id="Photonic-crystal-fiber-(PCF)-1"></a><a class="docs-heading-anchor-permalink" href="#Photonic-crystal-fiber-(PCF)" title="Permalink"></a></h2><p>In a PCF, the modes are not guided modes but leaky modes so that the computation requires a PML. The fiber is constituted of three rings of air hole (n=1) inserted in silica (n=1.45). The pitch is 2 µm, the hole diameter is 1.5 µm and the PML begins at 8 µm from the fiber center and its thickness is 2 µm. </p><p><img src="../assets/PCF.png" alt="PCF mesh"/></p><p>First, the mesh is loaded:</p><pre><code class="language-julia hljs">using OpticalFibers, OpticalFibers.ModeSolvers, GridapMakie, GLMakie
+model = GmshDiscreteModel(&quot;../../models/PCF.msh&quot;);</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">UnstructuredDiscreteModel()</code></pre><p>Then we define the refractive index profile function:</p><pre><code class="language-julia hljs">Pitch=2u&quot;µm&quot;
+r_hole=0.75u&quot;µm&quot;
+pos=ring.(1:3)
+xc=vcat(first.(pos)...)*Pitch
+yc=vcat(last.(pos)...)*Pitch
+RIP_PCF(x) = (any(@. hypot(x[1]-xc,x[2]-yc)&lt;r_hole)) ? 1.0 : 1.45</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">RIP_PCF (generic function with 1 method)</code></pre><p>Then we can compute four modes whose effective indices are close to the approximate value calculated for the fundamental mode at the wavelength of 1.3 µm:</p><pre><code class="language-julia hljs">neff_approx=approx_neff_PCF(1.3u&quot;µm&quot;,1.5u&quot;µm&quot;,2u&quot;µm&quot;);
+using MUMPS
+m=FEM2D(1.3u&quot;µm&quot;,RIP_PCF,model*u&quot;µm&quot;,neigs=4,approx_neff=neff_approx,field=true,solver=:MUMPS,type=:Vector,dPML=2u&quot;µm&quot;)</code></pre><pre class="documenter-example-output"><code class="nohighlight hljs ansi">4-element Vector{OpticalFibers.ModeSolvers.Mode{OpticalFibers.ModeSolvers.VectorFiberEMField}}:
+ [Mode n°1 - neff = 1.4228144355916668 + 0.0225493709535272im - λ = 1.3 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°2 - neff = 1.4228172782963173 + 0.022548962437968632im - λ = 1.3 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°3 - neff = 1.4137481993205758 + 5.892639004410672e-14im - λ = 1.3 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]
+ [Mode n°4 - neff = 1.4137481946988495 + 5.886965068740657e-14im - λ = 1.3 μm , EMField = OpticalFibers.ModeSolvers.VectorFiberEMField]</code></pre><p>The last two modes are fundamental modes. We can compute and plot the z-component of the Poynting vector of the last mode:</p><pre><code class="language-julia hljs">Pz=m[end].EMField.Pz
+fig,ax,plot_obj=GLMakie.plot(get_triangulation(Pz),Pz.value,axis=(aspect=DataAspect(),),colormap=:jet)
+ax.xlabel=&quot;x (µm)&quot;;
+ax.ylabel=&quot;y (µm)&quot;;
+ax.title=&quot;neff = $(m[end].neff)&quot;;
+Colorbar(fig[1,2], plot_obj);</code></pre><p><img src="../FEM2_Pz.png" alt="Pz for FM computed with FEM"/></p><h2 id="Photonic-bandgap-fiber"><a class="docs-heading-anchor" href="#Photonic-bandgap-fiber">Photonic bandgap fiber</a><a id="Photonic-bandgap-fiber-1"></a><a class="docs-heading-anchor-permalink" href="#Photonic-bandgap-fiber" title="Permalink"></a></h2><p>Before designing a PBG fiber, one has to compute the PBG of the infinite microstructured media that constitutes the cladding. In this example the cladding is a hexagonal lattice of circular rods with a pitch of 10 µm. The rods has a diameter of 3 µm and a refractive index of 1.47 while the cladding background media has a refractive index of 1.45. To compute the PBG, the mesh must be periodic. Since the cell is highly symmetric, the computation of the bands can be restricted to the highest symmetry points of the irreducible Brillouin zone (Γ, M and K).</p><pre><code class="language-julia hljs">using Plots, OpticalFibers, OpticalFibers.ModeSolvers
+kt,weight=compute_kt(2,:Hexagon,Irreducible=true,MeshType=:Edge,Pitch=10u&quot;µm&quot;)
+RIP2D=x-&gt;1.47-0.02*(hypot(x[1],x[2])&gt;=3u&quot;µm&quot;)
+model = GmshDiscreteModel(&quot;../../models/Cell_Hexagon2.msh&quot;)
+lambda=(0.8:0.025:1.6)u&quot;µm&quot;
+mm=Matrix{Vector{Mode}}(undef,length(lambda),length(kt))
+Threads.@threads for i in 1:length(kt)
+    mm[:,i]=FEM2D_periodic.(lambda,RIP2D,Ref(model*u&quot;µm&quot;),neigs=30,field=true,kt=kt[i]);
+end
+neff=zeros(length(lambda),length(kt),30)
+P=plot()
+a=palette([:red,:green,:blue],length(kt))
+plot!(P,lambda,1.45*ones(length(lambda)),color=:black,label=&quot;&quot;)
+for i=1:30
+    neff[:,:,i]=[real(m[i].neff) for m in mm]
+    for k=1:length(kt)
+        plot!(P,lambda,neff[:,k,i],color=a[k],label=&quot;&quot;)
+    end
+end
+P.series_list[2].plotattributes[:label]=&quot;Γ&quot;
+P.series_list[3].plotattributes[:label]=&quot;M&quot;
+P.series_list[4].plotattributes[:label]=&quot;K&quot;
+xlabel!(&quot;Wavelength&quot;)
+ylabel!(&quot;Effective index&quot;)
+ylims!((1.43,1.47))</code></pre><img src="d79cce6b.svg" alt="Example block output"/><p>To compute the fundamental mode, it is necessary to compute an approximative value of the effective index based on the band diagram.</p><pre><code class="language-julia hljs">using Interpolations
+neff_approx=(max.(neff[5:18,2,7],neff[5:18,1,7])+min.(neff[5:18,2,6],1.45))/2
+interp=LinearInterpolation(lambda[5:18],neff_approx)
+model_PBG = GmshDiscreteModel(&quot;../../models/PBG.msh&quot;)
+Pitch=10u&quot;µm&quot;
+r_hole=3u&quot;µm&quot;
+pos=ring.(1:4)
+xc=vcat(first.(pos)...)*Pitch
+yc=vcat(last.(pos)...)*Pitch
+RIP_PBG(x) = (any(@. hypot(x[1]-xc,x[2]-yc)&lt;r_hole)) ? 1.47 : 1.45
+lambda_PBG=(0.925:0.005:1.115)u&quot;µm&quot;
+mode_PBG=Vector{Vector{Mode}}(undef,length(lambda_PBG))
+for i=1:length(lambda_PBG)
+    mode_PBG[i]=FEM2D(lambda_PBG[i],RIP_PBG,model_PBG*u&quot;µm&quot;,neigs=1,approx_neff=interp(lambda_PBG[i]),field=true,solver=:MUMPS,dPML=4u&quot;µm&quot;)
+end
+mode_PBG=vcat(mode_PBG...)
+neff_PBG=getproperty.(mode_PBG,:neff)
+Aeff_PBG=Aeff.(mode_PBG)
+losses_PBG= getproperty.(mode_PBG,:losses)
+omega=2*pi*OpticalFibers.PhysicalData.c_Unitful./lambda_PBG
+beta=real(getproperty.(mode_PBG,:beta))
+omega2,beta2=derivative((omega,beta),2)
+lambda2=2*pi*OpticalFibers.PhysicalData.c_Unitful./omega2
+p1=plot(lambda_PBG,ustrip.(losses_PBG),yaxis=:log,xlabel=&quot;λ&quot;,ylabel=&quot;Losses (dB/km)&quot;)
+p2=plot(lambda_PBG,Aeff_PBG,xlabel=&quot;λ&quot;,ylabel=&quot;Aeff&quot;)
+p3=plot(lambda2,uconvert.(u&quot;ps^2/km&quot;,beta2),xlabel=&quot;λ&quot;,ylabel=&quot;β₂&quot;)
+plot(p1, p2, p3, layout=(1,3), legend=false)</code></pre><img src="d3103517.svg" alt="Example block output"/></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../PhysicalData/">« PhysicalData</a><a class="docs-footer-nextpage" href="../ModeSolvers/">ModeSolvers-Modes and Fields »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.16.1 on <span class="colophon-date" title="Friday 6 February 2026 15:35">Friday 6 February 2026</span>. Using Julia version 1.11.8.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
