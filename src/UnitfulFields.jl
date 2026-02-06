@@ -43,6 +43,12 @@ function Unitful.unit(m::UnitfulModel)
     return m.unit
 end
 
+Broadcast.:broadcastable(m::UnitfulModel)=Ref(m)
+
+#=function CartesianUnitfulModel(domain,partition)
+    return CartesianDiscreteModel(ustrip.(unit(domain[end]),domain),partition)*unit.(domain[end])
+end=#
+
 """
     abstract type UnitfulField{Dp,Df,dim} <:Function where dim<:Unitful.Dimensions end 
 
@@ -50,7 +56,7 @@ end
 - Df: dimension of the field: () for a scalar field, (2,) for 2D vector or (3,3) for a 3x3 tensor
 - dim: unit dimension of the field
 """
-abstract type UnitfulField{Dp,Df,dim} <:Function where dim<:Unitful.Dimensions end 
+abstract type UnitfulField{Dp,Df,dim} <:Function end 
 
 """
     const ScalarUnitfulField{Dp,dim}=UnitfulField{Dp,(),dim} 
@@ -458,8 +464,8 @@ function ArrayField(position::Union{AbstractVector{<:AbstractVector{<:realLength
     return ArrayField(position,v)
 end
 
-(f::FEMField{Dp,<:Any,<:Any})(r::VectorValue{Dp,<:realLength}) where Dp=getValue(f.value,ustrip(f.PositionUnit,r))*f.FieldUnit
-(f::FEMField{Dp,<:Any,<:Any})(r::AbstractArray{<:VectorValue{Dp,<:realLength}}) where Dp=getValue(f.value,ustrip.(f.PositionUnit,r)).*f.FieldUnit
+(f::FEMField{Dp,<:Any,<:Any})(r::VectorValue{Dp,<:realLength}) where Dp =getValue(f.value,ustrip(f.PositionUnit,r))*f.FieldUnit
+(f::FEMField{Dp,<:Any,<:Any})(r::AbstractArray{<:VectorValue{Dp,<:realLength}}) where Dp =getValue(f.value,ustrip.(f.PositionUnit,r)).*f.FieldUnit
 
 function Base.zero(f::FEMField{<:Any,Df,<:Any}) where{Df}
     trian=get_triangulation(f.value)
@@ -712,10 +718,10 @@ function getValue(f::Gridap.CellField,p::Point)
     x=VectorValue(Tuple(0.0 for j=1:Dp))
     cache1,cache2=Gridap.Fields.return_cache(f,x);
     cell_f_cache, f_cache, cell_f, f₀ = cache2
-    cell=get_cell(cache1,p)
     #Pour avoir le type de sortie
     cf=getindex!(cell_f_cache, cell_f, 1)
     ###
+    cell=get_cell(cache1,p)
     if (cell!=0)
         cf = getindex!(cell_f_cache, cell_f, cell)
         return evaluate!(f_cache,cf,p)
@@ -724,6 +730,7 @@ function getValue(f::Gridap.CellField,p::Point)
         return zero(a)
     end
 end
+
 
 
 
