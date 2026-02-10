@@ -245,7 +245,7 @@ m=FEM2D(1.6u"µm",RIP2D,model*u"µm",field=true,neigs=4,approx_neff=real(m1[pos]
 The field can be plotted using GridapMakie:
 ```@example 5
 using GridapMakie, GLMakie
-fig,ax,plot_obj=GLMakie.plot(get_triangulation(m[1].EMField.Ex),real(m[1].EMField.Ex.value),axis=(aspect=DataAspect(),),colormap=:jet)
+fig,ax,plot_obj=GLMakie.plot(real(m[1].EMField.Ex.value),axis=(aspect=DataAspect(),),colormap=:jet)
 Colorbar(fig[1,2], plot_obj);
 save("FEM_PML_Ex.png",fig); nothing #hide
 ```
@@ -331,9 +331,9 @@ The value given by FEM2D is slighlty different from that predicted by the analyt
 using GridapMakie
 using GLMakie
 fig=GLMakie.Figure(size=(750,250))
-fig1,ax1=GLMakie.plot(fig[1,1],get_triangulation(mFEM[10].EMField.E),abs(mFEM[10].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
-fig2,ax2=GLMakie.plot(fig[1,2],get_triangulation(mFEM[3].EMField.E),abs(mFEM[3].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
-fig3,ax3=GLMakie.plot(fig[1,3],get_triangulation(mFEM[1].EMField.E),abs(mFEM[1].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
+fig1,ax1=GLMakie.plot(fig[1,1],abs(mFEM[10].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
+fig2,ax2=GLMakie.plot(fig[1,2],abs(mFEM[3].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
+fig3,ax3=GLMakie.plot(fig[1,3],abs(mFEM[1].EMField.E.value),axis=(aspect=DataAspect(),),colormap=:jet);
 fig1.title="Rc = 10 mm"
 fig2.title="Rc = 3 mm"
 fig3.title="Rc = 1 mm"
@@ -400,7 +400,7 @@ m=FEM2D(1.3u"µm",RIP_PCF,model*u"µm",neigs=4,approx_neff=neff_approx,field=tru
 The last two modes are fundamental modes. We can compute and plot the z-component of the Poynting vector of the last mode:
 ```@example 4
 Pz=m[end].EMField.Pz
-fig,ax,plot_obj=GLMakie.plot(get_triangulation(Pz),Pz.value,axis=(aspect=DataAspect(),),colormap=:jet)
+fig,ax,plot_obj=GLMakie.plot(Pz.value,axis=(aspect=DataAspect(),),colormap=:jet)
 ax.xlabel="x (µm)";
 ax.ylabel="y (µm)";
 ax.title="neff = $(m[end].neff)";
