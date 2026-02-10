@@ -689,22 +689,23 @@ function getValue(f::Gridap.CellField,p::AbstractArray{<:Point})
     a=evaluate!(f_cache,cf,p[1])
     result=fill(zero(a),size(p))
     ###
-    nt=Threads.nthreads()
+    nt=Threads.maxthreadid()
     cache1t=Vector{typeof(cache1)}(undef,nt)
     cell_f_cachet=Vector{typeof(cell_f_cache)}(undef,nt)
     f_cachet=Vector{typeof(f_cache)}(undef,nt)
     inv_cmap = inverse_map.(cell_map)
     polytope = ctype_to_polytope[cell_to_ctype]
-    for i=1:Threads.nthreads()
+    for i=1:Threads.maxthreadid()
         cache1t[i]=(KDTreeSearch(num_nearest_vertices=Dp), kdtree, vertex_to_cells, cell_to_ctype, ctype_to_polytope, cell_map, deepcopy(table_cache))
         cell_f_cachet[i]=deepcopy(cell_f_cache)
         f_cachet[i]=deepcopy(f_cache)
     end
-    Threads.@threads for i in eachindex(p)
-        cell=get_cell_vector(cache1t[Threads.threadid()],p[i],inv_cmap,polytope)
+    Threads.@threads :static for i in eachindex(p)
+        tid = Threads.threadid()
+        cell=get_cell_vector(cache1t[tid],p[i],inv_cmap,polytope)
         if (cell!=0)
-            cf = getindex!(cell_f_cachet[Threads.threadid()], cell_f, cell)
-            result[i]=evaluate!(f_cachet[Threads.threadid()],cf,p[i])
+            cf = getindex!(cell_f_cachet[tid], cell_f, cell)
+            result[i]=evaluate!(f_cachet[tid],cf,p[i])
         end
     end
     return result
