@@ -35,8 +35,8 @@ The mode profile can be easily plotted:
 ```@example 1
 using Plots
 r=(0:0.01:10)*1u"µm";
-plot(r,m01.EMField.E(r),label=m01.Name)
-plot!(r,m11.EMField.E(r),label=m11.Name)
+plot(r,m01.EMField.E(r),label=m01.Name,xlabel="r",ylabel="E",linewidth=2,xlim=[0,10],ylim=[0,:auto])
+plot!(r,m11.EMField.E(r),label=m11.Name,linewidth=2)
 ```
 
 In order to visualize the modes in a 2D plot, we can convert the `Mode{ScalarFieldFunction1D}` to a `Mode{ScalarFieldFunction2D}` but we have to indicate the orientation of the mode by using the `cos` function or the `sin` function. Then, we normalize the modes and plot one of the two LP$_{11}$ modes. Be careful when using `Plots.jl`: unlike this package, the second index of the matrix corresponds to the x-coordinate (as matlab but the opposite of `Makie.jl`).
@@ -48,7 +48,7 @@ mm01=normalize(mm01)
 mm11c=normalize(mm11c)
 mm11s=normalize(mm11s)
 x=(-8:0.125:8)*1u"µm";
-contourf(x,x,mm11c.EMField.E(x,x)',levels=100,linewidth=0)
+contourf(x,x,mm11c.EMField.E(x,x)',levels=100,linewidth=0,aspect_ratio=:equal,title=mm11c.Name,xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8],size=(400,400))
 ```
 
 The beating between the LP$_{01}$ and the LP$_{11}$ can be observed by plotting the sum of the fields for different values of the distance $z$. The beating length is $\frac{2\pi}{\vert \Delta \beta \vert} = \frac{\lambda}{\vert \Delta n_{eff} \vert}\simeq 107$ µm
@@ -58,9 +58,10 @@ L=1u"µm"/(m01.neff-m11.neff)
 
 We can take advantage of the possibility to add fields to create the animation.
 ```@example 1
+maxi=maximum(abs2.(mm01.EMField.E(x,x)+mm11c.EMField.E(x,x)));
 anim=@animate for j=0:107
     TotalField=getEMField(mm01,j*2u"µm")+getEMField(mm11c,j*2u"µm");
-    contourf(x,x,abs2.(TotalField.E(x,x))',levels=100,linewidth=0,title="z = $(2*j) µm")
+    contourf(x,x,abs2.(TotalField.E(x,x))',levels=100,linewidth=0,title="|E|² - z = $(2*j) µm",xlabel="x",ylabel="y",ylim=[-8,8],xlim=[-8,8],size=(400,400),cbar=false,clim=(0*maxi,maxi))
 end;
 gif(anim,"anim_field.gif",fps=15)
 ```
@@ -82,7 +83,7 @@ mv2=multi_step_fiber_modes(1u"µm",2,2u"µm",[1.47,1.45],field=true,type=:Vector
 
 Then, the Poynting vector of the mode HE$_{21}$ can be computed and plotted.
 ```@example 1
-contourf(x,x,(mv2[1].EMField.Pz(x,x))',linewidth=0,levels=100,xlims=(-4u"µm",4u"µm"),ylims=(-4u"µm",4u"µm"))
+contourf(x,x,(mv2[1].EMField.Pz(x,x))',linewidth=0,levels=100,xlims=(-4u"µm",4u"µm"),ylims=(-4u"µm",4u"µm"),aspect_ratio=:equal,xlabel="x",ylabel="y",size=(400,400),cbar=false)
 xc=x[1:4:end];
 X,Y=meshgrid(xc);
 quiver!(X,Y,quiver=(real(mv2[1].EMField.Ex(xc,xc)'/20u"V/m"),real(mv2[1].EMField.Ey(xc,xc)'/20u"V/m")),color=:cyan,arrow=arrow(:closed))
@@ -103,8 +104,8 @@ RIP=x->1.47-0.02*(x[1]>=2u"µm")
 m0FEM=FEM1D(1u"µm",0,RIP,model*u"µm",field=true,neigs=4)
 m0FEM=normalize.(m0FEM)
 m0=normalize.(m0)
-plot(r,m0[1].EMField.E(r),label="Step-index solver")
-plot!(r,-m0FEM[1].EMField.E(r),label="FEM1D solver",line=:dash)
+plot(r,m0[1].EMField.E(r),label="Step-index solver",ylabel="E",xlabel="r",linewidth=2,xlim=[0,10],ylim=[0,:auto])
+plot!(r,-m0FEM[1].EMField.E(r),label="FEM1D solver",line=:dash,linewidth=2)
 ```
 
 ### Scalar modes with FEM2D
@@ -114,10 +115,10 @@ model = GmshDiscreteModel("../../models/example1.msh");
 RIP2D=x->1.47-0.02*(hypot(x[1],x[2])>=2u"µm")
 mFEM2D=FEM2D(1*u"µm",RIP2D,model*u"µm",field=true,neigs=4)
 mFEM2D=normalize.(mFEM2D);
-p1=contourf(x,x,mFEM2D[1].EMField.E(x,x)',levels=50,linewidth=0,aspect_ratio=:equal);
-p2=contourf(x,x,mFEM2D[2].EMField.E(x,x)',levels=50,linewidth=0,aspect_ratio=:equal);
-p3=contourf(x,x,mFEM2D[3].EMField.E(x,x)',levels=50,linewidth=0,aspect_ratio=:equal);
-plot(p1, p2, p3, layout=(1,3), legend=false,size=(900,300))
+p1=contourf(x,x,mFEM2D[1].EMField.E(x,x)',levels=50,linewidth=0,aspect_ratio=:equal,xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8],title="Mode 1");
+p2=contourf(x,x,mFEM2D[2].EMField.E(x,x)',levels=50,linewidth=0,aspect_ratio=:equal,xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8],title="Mode 2");
+p3=contourf(x,x,mFEM2D[3].EMField.E(x,x)',levels=50,linewidth=0,aspect_ratio=:equal,xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8],title="Mode 3");
+plot(p1, p2, p3, layout=(1,3), legend=false,size=(900,310))
 ```
 Note that there is no preferential orientation for the LP$_{11}$ modes given by the FEM solver. We can check that the modes given by the quasi-analytical solver and the FEM solver are the same by computing the overlap integrals:
 ```@example 1
@@ -132,21 +133,21 @@ mvFEM2D=normalize.(mvFEM2D)
 ```
 We can verify that the modes given by the quasi-analytical solver and the FEM solver are the same by plotting the fields.
 ```@example 1
-p1=contourf(x,x,real(mvFEM2D[4].EMField.Ex(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ex");
-p2=contourf(x,x,real(mvFEM2D[4].EMField.Ey(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ey");
-p3=contourf(x,x,imag(mvFEM2D[4].EMField.Ez(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ez");
-p4=contourf(x,x,real(mvFEM2D[4].EMField.Hx(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hx");
-p5=contourf(x,x,real(mvFEM2D[4].EMField.Hy(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hy");
-p6=contourf(x,x,imag(mvFEM2D[4].EMField.Hz(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hz");
+p1=contourf(x,x,real(mvFEM2D[4].EMField.Ex(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ex",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p2=contourf(x,x,real(mvFEM2D[4].EMField.Ey(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ey",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p3=contourf(x,x,imag(mvFEM2D[4].EMField.Ez(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ez",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p4=contourf(x,x,real(mvFEM2D[4].EMField.Hx(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hx",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p5=contourf(x,x,real(mvFEM2D[4].EMField.Hy(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hy",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p6=contourf(x,x,imag(mvFEM2D[4].EMField.Hz(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hz",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
 plot(p1, p2, p3, p4, p5, p6, layout=(2,3), legend=false,size=(900,600))
 ```
 ```@example 1
-p1=contourf(x,x,real(mv[4].EMField.Ex(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ex");
-p2=contourf(x,x,real(mv[4].EMField.Ey(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ey");
-p3=contourf(x,x,imag(mv[4].EMField.Ez(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ez");
-p4=contourf(x,x,real(mv[4].EMField.Hx(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hx");
-p5=contourf(x,x,real(mv[4].EMField.Hy(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hy");
-p6=contourf(x,x,imag(mv[4].EMField.Hz(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hz");
+p1=contourf(x,x,real(mv[4].EMField.Ex(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ex",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p2=contourf(x,x,real(mv[4].EMField.Ey(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ey",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p3=contourf(x,x,imag(mv[4].EMField.Ez(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Ez",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p4=contourf(x,x,real(mv[4].EMField.Hx(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hx",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p5=contourf(x,x,real(mv[4].EMField.Hy(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hy",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
+p6=contourf(x,x,imag(mv[4].EMField.Hz(x,x)'),levels=50,linewidth=0,aspect_ratio=:equal,title="Hz",xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8]);
 plot(p1, p2, p3, p4, p5, p6, layout=(2,3), legend=false,size=(900,600))
 ```
 
@@ -159,8 +160,8 @@ using Plots, OpticalFibers, OpticalFibers.PhysicalData, OpticalFibers.ModeSolver
 lambda=(1:0.01:1.5)u"µm";
 RIP=[x->n_Ge_Doped_Silica(l,0)+(n_Ge_Doped_Silica(l,0.2)-n_Ge_Doped_Silica(l,0))*(x[1]<=3.5u"µm")*(1-x[1]^2/(3.5u"µm")^2) for l in lambda];
 r=(0:0.1:5)u"µm";
-plot(r,RIP[1].(r),label="λ = 1 µm",xlabel="r (µm)",ylabel="Refractive index")
-plot!(r,RIP[end].(r),label="λ = 1.5 µm")
+plot(r,RIP[1].(r),label="λ = 1 µm",xlabel="r",ylabel="Refractive index",linewidth=2,xlim=[0,5])
+plot!(r,RIP[end].(r),label="λ = 1.5 µm",linewidth=2)
 ```
 
 The modal content is then computed (note that we must use Ref(model) because length(model) is not defined in Gridap):
@@ -175,9 +176,9 @@ N11=sum((length.(m[:,2])).>=1);
 neff11=[real(m[j,2][1].neff) for j in 1:N11];
 N21=sum((length.(m[:,3])).>=1);
 neff21=[real(m[j,3][1].neff) for j in 1:N21];
-plot(lambda,n_Ge_Doped_Silica.(lambda,0),label="Silica",xlabel="λ",ylabel="Effective index",color=:black);
-plot!(lambda,n_Ge_Doped_Silica.(lambda,0.2),label="Ge-doped Silica (20%)",color=:black,line=:dash);
-plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=["LP01" "LP11" "LP02" "LP21"])
+plot(lambda,n_Ge_Doped_Silica.(lambda,0),label="Silica",xlabel="λ",ylabel="Effective index",color=:black,linewidth=2,xlim=[1,1.5]);
+plot!(lambda,n_Ge_Doped_Silica.(lambda,0.2),label="Ge-doped Silica (20%)",color=:black,line=:dash,linewidth=2);
+plot!([lambda,lambda[1:N11],lambda[1:N02],lambda[1:N21]],[neff01,neff11,neff02,neff21],label=["LP01" "LP11" "LP02" "LP21"],linewidth=[2 2 2 2])
 ```
 
 The second-order dispersion is defined by $\beta_2=\frac{\partial^2 \beta}{\partial \omega^2}$.
@@ -186,7 +187,7 @@ beta01=neff01*2*pi./lambda;
 omega=2*pi*OpticalFibers.PhysicalData.c_Unitful./lambda
 omega2,beta2=derivative((omega,beta01),2);
 lambda2=2*pi*OpticalFibers.PhysicalData.c_Unitful./omega2;
-plot(lambda2,uconvert.(u"ps^2/km",beta2),xlabel="λ",ylabel="β₂",label="LP01")
+plot(lambda2,uconvert.(u"ps^2/km",beta2),xlabel="λ",ylabel="β₂",label="LP01",linewidth=2,xlim=[1,1.5])
 ```
 
 To compute the effective area and the non-linear coefficient of the fundamental mode, the fields must be calculated:
@@ -195,8 +196,8 @@ m=FEM1D.(lambda,0,RIP,Ref(model*u"µm"),field=true);
 m=[m[i][1] for i in 1:length(lambda)];
 A=Aeff.(m);
 gamma=nonLinearCoefficient.(m,2.53E-20u"m^2/W")
-plot(lambda,A,label="Aeff",ylabel="Effective area",xlabel="λ",color=:blue,leg=:topright);
-plot!(twinx(),lambda,uconvert.(u"W^-1*km^-1",gamma),label="γ",ylabel="Non-linear coefficient",color=:red,leg=:topleft)
+plot(lambda,A,label="Aeff",ylabel="Effective area",xlabel="λ",color=:blue,leg=:topright,linewidth=2,xlim=[1,1.5]);
+plot!(twinx(),lambda,uconvert.(u"W^-1*km^-1",gamma),label="γ",ylabel="Non-linear coefficient",color=:red,leg=:topleft,linewidth=2,xlim=[1,1.5])
 ```
 
 ## Leaky modes in step index fiber with a low index trench
@@ -224,8 +225,8 @@ m0[5].losses
 ```@example 5
 r=(0:0.01:15)u"µm"
 m0=normalize.(m0)
-plot(r,real(m0[1].EMField.E(r)),xlabel="r",ylabel="real(E)",label="LP01")
-plot!(r,-real(m0[5].EMField.E(r)),label="LP02")
+plot(r,real(m0[1].EMField.E(r)),xlabel="r",ylabel="real(E)",label="LP01",linewidth=2,xlim=[0,15])
+plot!(r,-real(m0[5].EMField.E(r)),label="LP02",linewidth=2)
 ```
 
 We can also compute the effective index of the LP$_{11}$ mode:
@@ -323,8 +324,8 @@ Threads.@threads for i in axes(RcFEM,1)
 end
 using Plots
 Rc=(1:0.01:10)u"mm"
-plot(Rc,uconvert.(u"m^-1",gamma.(Rc)),yaxis=:log,xlabel="Rc",ylabel="γ",label="Snyder & Love")
-plot!(RcFEM,uconvert.(u"m^-1",gammaFEM),label="FEM2D")
+plot(Rc,uconvert.(u"m^-1",gamma.(Rc)),yaxis=:log,xlabel="Rc",ylabel="γ",label="Snyder & Love",linewidth=2,xlim=[0,10])
+plot!(RcFEM,uconvert.(u"m^-1",gammaFEM),label="FEM2D",linewidth=2)
 ```
 The value given by FEM2D is slighlty different from that predicted by the analytical formula and the difference increases as the bent radius decreases because the mode increasingly distorted.
 ```@example 6
@@ -424,7 +425,7 @@ end
 neff=zeros(length(lambda),length(kt),30)
 P=plot()
 a=palette([:red,:green,:blue],length(kt))
-plot!(P,lambda,1.45*ones(length(lambda)),color=:black,label="")
+plot!(P,lambda,1.45*ones(length(lambda)),color=:black,label="",xlim=[0.8,1.6],ylim=[1.43,1.47],xlabel="Wavelength",ylabel="Effective index")
 for i=1:30
     neff[:,:,i]=[real(m[i].neff) for m in mm]
     for k=1:length(kt)
@@ -434,9 +435,7 @@ end
 P.series_list[2].plotattributes[:label]="Γ"
 P.series_list[3].plotattributes[:label]="M"
 P.series_list[4].plotattributes[:label]="K"
-xlabel!("Wavelength")
-ylabel!("Effective index")
-ylims!((1.43,1.47))
+P
 ```
 
 To compute the fundamental mode, it is necessary to compute an approximative value of the effective index based on the band diagram.
@@ -464,8 +463,8 @@ omega=2*pi*OpticalFibers.PhysicalData.c_Unitful./lambda_PBG
 beta=real(getproperty.(mode_PBG,:beta))
 omega2,beta2=derivative((omega,beta),2)
 lambda2=2*pi*OpticalFibers.PhysicalData.c_Unitful./omega2
-p1=plot(lambda_PBG,ustrip.(losses_PBG),yaxis=:log,xlabel="λ",ylabel="Losses (dB/km)")
-p2=plot(lambda_PBG,Aeff_PBG,xlabel="λ",ylabel="Aeff")
-p3=plot(lambda2,uconvert.(u"ps^2/km",beta2),xlabel="λ",ylabel="β₂")
-plot(p1, p2, p3, layout=(1,3), legend=false)
+p1=plot(lambda_PBG,ustrip.(losses_PBG),yaxis=:log,xlabel="λ",ylabel="Losses (dB/km)",linewidth=2,xlim=[0.925,1.115])
+p2=plot(lambda_PBG,Aeff_PBG,xlabel="λ",ylabel="Aeff",linewidth=2,xlim=[0.925,1.115])
+p3=plot(lambda2,uconvert.(u"ps^2/km",beta2),xlabel="λ",ylabel="β₂",linewidth=2,xlim=[0.925,1.115])
+plot(p1, p2, p3, layout=(1,3), legend=false,size=(650,400))
 ```
