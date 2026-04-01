@@ -1,7 +1,7 @@
 name = "OpticalFibers"
 uuid = "2ac20604-6aa9-4c1a-aae8-c6d78826713f"
 authors = ["ovanvincq <olivier.vanvincq@univ-lille.fr>"]
-version = "0.3.2"
+version = "0.3.3"
 
 [deps]
 ArnoldiMethod = "ec485272-7323-5ecc-a04f-4719b315124d"
@@ -35,7 +35,7 @@ ArnoldiMethod = "0.4"
 Bessels = "0.2"
 CUDSS = ">=0.5.3"
 CUDA = "5"
-Gridap = "0.19"
+Gridap = "0.19, 0.20"
 GridapGmsh = "0.7"
 HCubature = "1.5"
 Interpolations = "0.16"
