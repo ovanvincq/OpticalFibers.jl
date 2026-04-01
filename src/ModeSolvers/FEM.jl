@@ -366,7 +366,7 @@ function FEM2D(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff:
         throw(DomainError(order, "The order must be at least 1"));
     end
     if (!(type in [:Scalar,:Vector]))
-        throw(DomainError(solver, "solver must be :Scalar or :Vector"));
+        throw(DomainError(type, "solver must be :Scalar or :Vector"));
     end
     if (!(solver in [:LU,:MUMPS,:CUDSS]))
         throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
