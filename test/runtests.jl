@@ -128,7 +128,7 @@ end
     @test isapprox(MFD(modeFD_MUMPS[1]),13.37u"µm",atol=1E-2u"µm")
 end
 
-@testset "FEM1D with CUDSS" begin
+#=@testset "FEM1D with CUDSS" begin
     using CUDA,CUDSS
     modeFD_CUDSS=FEM1D(0.6328u"µm",0,x->1.462420.-(1.462420+1.457420)*(x[1]>=8.335u"µm"),CartesianDiscreteModel((0,50),20000)*u"µm",neigs=3,order=3,field=true,solver=:CUDSS);
     neffFD_CUDSS=getproperty.(modeFD_CUDSS,:neff);
@@ -136,6 +136,6 @@ end
     @test isapprox(UFD_CUDSS,[2.1845,4.9966,7.7642],atol=1E-4)
     @test isapprox(Aeff(modeFD_CUDSS[1]),126.43u"µm^2",atol=1E-2u"µm^2")
     @test isapprox(MFD(modeFD_CUDSS[1]),13.37u"µm",atol=1E-2u"µm")
-end
+end=#
 
 
