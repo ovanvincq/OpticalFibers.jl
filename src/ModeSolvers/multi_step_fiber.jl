@@ -1505,7 +1505,7 @@ function multi_step_fiber_modes(lambda_unitful::realLength,nu::Integer,radius_un
                     neff=collect(LinRange(neff_min[n_neff],neff_max[n_neff],nb1));
                     pos=findroot(k0,nu,neff,radius,index,t[it]);
                     if (length(pos)!=1)
-                        throw(ErrorException("Cannot find one root, try to increase firstDivision"));
+                        throw(ErrorException("Cannot find a single root, you should decrease precision."));
                         return;
                     end
                     neff_min[n_neff]=neff[pos[1].-1];
@@ -1566,7 +1566,6 @@ function multi_step_fiber_modes(lambda_unitful::realLength,nu::Integer,radius_un
                         name=string("TM 0,",string(length(neff_min)-n+1));
                         E=x->VectorValue(TM_Ex(ustrip.(u"m",x))u"V/m",TM_Ey(ustrip.(u"m",x))u"V/m",TM_Ez(ustrip.(u"m",x))u"V/m")
                         H=x->VectorValue(TM_Hx(ustrip.(u"m",x))u"A/m",TM_Hy(ustrip.(u"m",x))u"A/m",TM_Hz(ustrip.(u"m",x))u"A/m")
-                        #modes[n]=Mode(name,neff_result,lambda_unitful,VectorEMField2D(FunctionField(2,E),FunctionField(2,H)));
                         modes[n]=Mode(name,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E),FunctionField(2,H)));;
                     end
                 elseif t[it]==3
@@ -1585,9 +1584,7 @@ function multi_step_fiber_modes(lambda_unitful::realLength,nu::Integer,radius_un
                         name=string("TE 0,",string(length(neff_min)-n+1));
                         E=x->VectorValue(TM_Ex(ustrip.(u"m",x))u"V/m",TM_Ey(ustrip.(u"m",x))u"V/m",TM_Ez(ustrip.(u"m",x))u"V/m")
                         H=x->VectorValue(TM_Hx(ustrip.(u"m",x))u"A/m",TM_Hy(ustrip.(u"m",x))u"A/m",TM_Hz(ustrip.(u"m",x))u"A/m")
-                        #modes[pos0+n]=Mode(name,neff_result,lambda_unitful,VectorEMField2D(FunctionField(2,E),FunctionField(2,H)));
                         modes[pos0+n]=Mode(name,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E),FunctionField(2,H)));
-                        #modes[pos0+n]=Mode(name,neff_result,lambda_unitful,VectorEMFieldFunction2D(x->TM_Ex(ustrip.(u"m",x))u"V/m",x->TM_Ey(ustrip.(u"m",x))u"V/m",x->TM_Ez(ustrip.(u"m",x))u"V/m",x->TM_Hx(ustrip.(u"m",x))u"A/m",x->TM_Hy(ustrip.(u"m",x))u"A/m",x->TM_Hz(ustrip.(u"m",x))u"A/m"));
                     end
                 else
                     #HE-EH
@@ -1624,8 +1621,6 @@ function multi_step_fiber_modes(lambda_unitful::realLength,nu::Integer,radius_un
                         H2=x->VectorValue(HEEH_Hx2(ustrip.(u"m",x))u"A/m",HEEH_Hy2(ustrip.(u"m",x))u"A/m",HEEH_Hz2(ustrip.(u"m",x))u"A/m")
                         modes[2*n]=Mode(name1,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E),FunctionField(2,H)));
                         modes[2*n-1]=Mode(name2,neff_result,lambda_unitful,VectorFiberEMField(FunctionField(2,E2),FunctionField(2,H2)));
-                        #modes[2*n-1]=Mode(name1,neff_result,lambda_unitful,VectorEMFieldFunction2D(x->HEEH_Ex(ustrip.(u"m",x))u"V/m",x->HEEH_Ey(ustrip.(u"m",x))u"V/m",x->HEEH_Ez(ustrip.(u"m",x))u"V/m",x->HEEH_Hx(ustrip.(u"m",x))u"A/m",x->HEEH_Hy(ustrip.(u"m",x))u"A/m",x->HEEH_Hz(ustrip.(u"m",x))u"A/m"));
-                        #modes[2*n]=Mode(name2,neff_result,lambda_unitful,VectorEMFieldFunction2D(x->HEEH_Ex2(ustrip.(u"m",x))u"V/m",x->HEEH_Ey2(ustrip.(u"m",x))u"V/m",x->HEEH_Ez2(ustrip.(u"m",x))u"V/m",x->HEEH_Hx2(ustrip.(u"m",x))u"A/m",x->HEEH_Hy2(ustrip.(u"m",x))u"A/m",x->HEEH_Hz2(ustrip.(u"m",x))u"A/m"));
                     end
                 end
             end

@@ -25,7 +25,12 @@ module OpticalFibersCudssExt
 
     function OpticalFibers.eigs_CUDA(A,B;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false,ir_n_steps::Int64=10)
         solver=CudssSolver(CuSparseMatrixCSR(A-sigma*B),"G",'F')
-        cudss_set(solver, "use_matching", 1)
+        if CUDSS.version()<v"0.8"
+            cudss_set(solver, "use_matching", 1)
+        else
+            cudss_set(solver, "matching_alg", "algo6")
+            cudss_set(solver,"ir_tol",1E-9)
+        end
         cudss_set(solver,"ir_n_steps",ir_n_steps)
         x = CUDA.zeros(eltype(A),10)#sans importance pour les 2 phases suivantes
         cudss("analysis", solver, x, x)
