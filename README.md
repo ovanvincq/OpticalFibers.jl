@@ -144,7 +144,7 @@ julia> using MUMPS
 julia> ms2D_bent=FEM2D(1.55u"µm",RIP2D_bent,model*u"µm",field=true,neigs=1,dPML=3u"µm",approx_neff=ms_straight[1].neff,solver=:MUMPS)
 1-element Vector{Mode{ScalarFiberEMField2D}}:
  [Mode LP n°1 - neff = 1.4414582242320715 + 1.5096368959671403e-9im - λ = 1.55 μm , EMField = ScalarFiberEMField2D]
-julia> using CUDSS
+julia> using CUDA,CUDSS
 julia> ms2D_bent=FEM2D(1.55u"µm",RIP2D_bent,model*u"µm",field=true,neigs=1,dPML=3u"µm",approx_neff=ms_straight[1].neff,solver=:CUDSS)
 1-element Vector{Mode{ScalarFiberEMField2D}}:
  [Mode LP n°1 - neff = 1.4414582242320717 + 1.5096369002222508e-9im - λ = 1.55 μm , EMField = ScalarFiberEMField2D]
