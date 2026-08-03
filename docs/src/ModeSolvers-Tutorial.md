@@ -246,7 +246,7 @@ m=FEM2D(1.6u"µm",RIP2D,model*u"µm",field=true,neigs=4,approx_neff=real(m1[pos]
 The field can be plotted using GridapMakie:
 ```@example 5
 using GridapMakie, GLMakie
-fig,ax,plot_obj=GLMakie.plot(real(m[1].EMField.Ex.value),axis=(aspect=DataAspect(),),colormap=:jet)
+fig,ax,plot_obj=GLMakie.plot(abs(m[1].EMField.Ex.value),axis=(aspect=DataAspect(),),colormap=:jet)
 Colorbar(fig[1,2], plot_obj);
 save("FEM_PML_Ex.png",fig); nothing #hide
 ```
