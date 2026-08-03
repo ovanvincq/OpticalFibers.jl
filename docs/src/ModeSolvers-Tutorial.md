@@ -34,7 +34,7 @@ nothing; #hide
 The mode profile can be easily plotted:
 ```@example 1
 using Plots
-r=(0:0.01:10)*1u"µm";
+r=(0:0.01:10)u"µm";
 plot(r,m01.EMField.E(r),label=m01.Name,xlabel="r",ylabel="E",linewidth=2,xlim=[0,10],ylim=[0,:auto])
 plot!(r,m11.EMField.E(r),label=m11.Name,linewidth=2)
 ```
@@ -47,7 +47,7 @@ mm11s=convertTo2D(m11,90)
 mm01=normalize(mm01)
 mm11c=normalize(mm11c)
 mm11s=normalize(mm11s)
-x=(-8:0.125:8)*1u"µm";
+x=(-8:0.125:8)u"µm";
 contourf(x,x,mm11c.EMField.E(x,x)',levels=100,linewidth=0,aspect_ratio=:equal,title=mm11c.Name,xlabel="x",ylabel="y",cbar=false,ylim=[-8,8],xlim=[-8,8],size=(400,400))
 ```
 
@@ -440,7 +440,7 @@ P
 
 To compute the fundamental mode, it is necessary to compute an approximative value of the effective index based on the band diagram.
 ```@example 7
-using Interpolations
+using Interpolations, MUMPS
 neff_approx=(max.(neff[5:18,2,7],neff[5:18,1,7])+min.(neff[5:18,2,6],1.45))/2
 interp=LinearInterpolation(lambda[5:18],neff_approx)
 model_PBG = GmshDiscreteModel("../../models/PBG.msh")

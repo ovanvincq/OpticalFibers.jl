@@ -9,16 +9,16 @@ OpticalFibers is a package that allows to compute modes of optical fibers. Diffe
 In order to specify units of physical quantities, this package uses `Unitful.jl`.
 
 ## Installation
-OpticalFibers requires at least julia 1.10 and can be installed with:
+OpticalFibers requires at least julia 1.10 and can be installed through the Julia package manager:
 
 ```julia
-using Pkg
-Pkg.add("OpticalFibers")
+julia> ]
+pkg> add OpticalFibers
 ```
 
 ## Quickstart
 ### Finding guided modes of a step-index fiber using the semi-analytical mode solver
-Computation of the scalar fundamental mode $\text{LP}_{01}$ of a step index fiber with a core-radius of 2 µm, a refractive index of 1.47 for core and 1.45 for cladding at a wavelength of 1 µm:
+Computation of the scalar fundamental mode $\text{LP}_{01}$ of a step index fiber with a core-radius of 2 µm, a refractive index of 1.47 for the core and 1.45 for the cladding at a wavelength of 1 µm:
 ```julia
 julia> using OpticalFibers, OpticalFibers.ModeSolvers
 julia> ms=multi_step_fiber_modes(1u"µm",0,2u"µm",[1.47,1.45],field=true)
@@ -38,7 +38,7 @@ julia> mv=multi_step_fiber_modes(1u"µm",1,2u"µm",[1.47,1.45],type=:Vector)
 ```
 
 ### Finding guided modes of a graded-index fiber using the FEM mode solver
-Computation of the scalar modes of a parabolic-index fiber with a core-radius of 4 µm, a refractive index of 1.48 for core center and 1.45 for cladding at a wavelength of 1 µm by using the finite element method with 1000 nodes between r=0 and r=20 µm:
+Computation of the scalar modes of a parabolic-index fiber with a core-radius of 4 µm, a refractive index of 1.48 for the core center and 1.45 for the cladding at a wavelength of 1 µm by using the finite element method with 1000 nodes between r=0 and r=20 µm:
 ```julia
 julia> using OpticalFibers, OpticalFibers.ModeSolvers
 julia> m=FEM1D(1u"µm",0,x->1.45+0.03*(1-x[1]^2/16u"µm^2")*(x[1]<=4u"µm"),CartesianDiscreteModel((0,20),1000)*u"µm",field=true,neigs=5)
@@ -122,23 +122,25 @@ julia> ms2D_bent[1].losses
 In this case, the bend losses are 53 dB/km
 
 ## Using MUMPS or CUDSS with Mode Solvers
-The computation of modes of large microstructured fibers can take a long time (several minutes). It is possible to reduce this computation time by using the package `MUMPS.jl` or `CUDSS.jl` to speed up the LU decomposition. Note that support of `CUDSS.jl` is experimental because the iterative refinement tolerance is not yet implemented in CUDSS and the number of iterative refinement step has been arbitrarily set to 10. Using CUDSS requires a GPU with sufficient memory (and with good FP64 performance).
+The computation of modes of large microstructured fibers can take a long time (several minutes). It is possible to reduce this computation time by using the package `MUMPS.jl` or `CUDSS.jl` (with a Nvidia gpu) to speed up the LU decomposition. Using CUDSS requires a GPU with sufficient memory (and with good FP64 performance).
 
-On windows, recent versions of `MUMPS.jl` do not work and it is recommended to use version 1.4.0:
+Some versions of `MUMPS.jl` do not work on Windows: it is recommended to use version >= 1.6.1 (or exactly version 1.4.0). All versions work on Linux. To install version 1.6.1, you can run the following commands:
 ```julia
-using Pkg
-julia> Pkg.add(name="MUMPS",version="1.4.0")
-julia> Pkg.pin("MUMPS")
+julia> ]
+pkg> add MUMPS@1.6.1
+pkg> pin MUMPS
 ```
 
-The support of `CUDSS.jl` is restricted to version >=0.5.3
+The support of `CUDSS.jl` is restricted to version >=0.8 (because version 0.8 is a breaking release) and requires `CUDA.jl` version 6.
+
+The iterative refinement sometimes generate an error "ERROR: CUDSSError: no description for this error (code 7, CUDSS_STATUS_IR_FAILED)". You can solve this problem by choosing a greater value of the `CUDSS_ir_tol` parameter of FEM functions (default value: 1E-9). Please refer to CUDSS documentation for the meaning of this parameter.
 ```julia
-using Pkg
-julia> Pkg.add(name="CUDSS",version="0.5.3")
-julia> Pkg.pin("CUDSS")
+julia> ]
+pkg> add CUDSS@0.8
+pkg> add CUDA
 ```
 
-To compute the modes, the keyword solver must be used:
+To compute the modes with one of these packages, the keyword solver must be used:
 ```julia
 julia> using MUMPS
 julia> ms2D_bent=FEM2D(1.55u"µm",RIP2D_bent,model*u"µm",field=true,neigs=1,dPML=3u"µm",approx_neff=ms_straight[1].neff,solver=:MUMPS)
@@ -152,5 +154,4 @@ julia> ms2D_bent=FEM2D(1.55u"µm",RIP2D_bent,model*u"µm",field=true,neigs=1,dPM
 
 
 ## Credits
-
 OpticalFibers.jl is maintained by Olivier Vanvincq ([University of Lille](https://www.univ-lille.fr/), [PhLAM laboratory](https://phlam.univ-lille.fr/)).
