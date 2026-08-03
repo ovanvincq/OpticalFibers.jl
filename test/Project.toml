@@ -1,9 +1,13 @@
 [deps]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 Gridap = "56d4f2e9-7ea1-5844-9cf6-b9c51ca7ce8e"
+CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+CUDSS = "45b445bb-4962-46a0-9369-b4df9d0f772e"
 MPI = "da04e1cc-30fd-572f-bb4f-1f8673147195"
 MUMPS = "55d2b088-9f4e-11e9-26c0-150b02ea6a46"
 
 [compat]
-Gridap = "0.19 - 0.20"
-MUMPS = "=1.4.0"
+CUDA = "6"
+CUDSS = ">=0.8"
+Gridap = "0.20.4"
+MUMPS = ">=1.5.1"
