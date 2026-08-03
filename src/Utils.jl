@@ -168,7 +168,15 @@ function eigs_MUMPS(args...;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int6
      error("MUMPS is not loaded")
 end
 
+function eigs_quadratic_MUMPS(args...;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false)
+     error("MUMPS is not loaded")
+end
+
 function eigs_CUDA(args...;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false,ir_n_steps::Int64=10)
+     error("CUDSS is not loaded")
+end
+
+function eigs_quadratic_CUDA(args...;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false,ir_n_steps::Int64=10)
      error("CUDSS is not loaded")
 end
 
@@ -201,6 +209,48 @@ end
 
 function eigs_LU(A;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false)
     eigs_LU(A,SparseMatrixCSC(I,size(A,1),size(A,2));sigma=sigma,nev=nev,tol=tol,restarts=restarts,verbose=verbose)
+end
+
+#solve A*u+beta*B*u+beta^2*C*u=0
+
+struct ShiftAndInvert_quadratic_LU{TA,TB,TT}
+    M_lu::TA
+    A::TB
+    C::TB
+    sigma::ComplexF64
+    temp::TT
+    temp2::TT
+    N::Int64
+end
+
+function (M::ShiftAndInvert_quadratic_LU)(y,x)
+    x1=@view x[1:M.N]
+    x2=@view x[M.N+1:end]
+    y1=@view y[1:M.N]
+    y2=@view y[M.N+1:end]
+    mul!(M.temp2, M.C, x2)
+    mul!(M.temp, M.A, x1)
+    axpy!(-M.sigma,M.temp2,M.temp)
+    ldiv!(M.temp2, M.M_lu, M.temp)
+    copyto!(y2, M.temp2)
+    @. y1=(M.temp2-x1)/M.sigma
+end
+
+function eigs_quadratic_LU(A,B,C;sigma=0,nev::Int64=1,tol::Float64=0.0,restarts::Int64=200,verbose::Bool=false)
+    N=size(A,1)
+    a = ShiftAndInvert_quadratic_LU(lu(A+sigma*B+sigma^2*C),A,C,ComplexF64(sigma),Vector{eltype(A)}(undef, N),Vector{eltype(A)}(undef, N),N)
+    map_LU=LinearMap{eltype(A)}(a, 2*N, ismutating=true)
+    if (tol!=0)
+        decomp,history  = partialschur(map_LU, nev=nev, tol=tol, restarts=restarts, which=:LM)
+    else
+        decomp,history  = partialschur(map_LU, nev=nev, restarts=restarts, which=:LM)
+    end
+    if (verbose)
+        @show history
+    end
+    λs_inv, X = partialeigen(decomp);
+    λs=(1 ./λs_inv).+sigma
+    return λs,X;
 end
 
 """
