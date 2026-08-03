@@ -20,7 +20,7 @@ using Roots
 using Unitful
 
 import OpticalFibers.PhysicalData: c,mu0,eps0,h,Z0,c_Unitful,mu0_Unitful,eps0_Unitful,h_Unitful,Z0_Unitful
-import OpticalFibers: eigs_MUMPS,eigs_LU,eigs_CUDA,get_companion,add_cylindrical_PML,add_twist_PML,add_rectangular_PML,nb_args,UnitfulField,FunctionField,FEMField,ArrayField,UnitfulModel
+import OpticalFibers: eigs_MUMPS,eigs_quadratic_MUMPS,eigs_LU,eigs_quadratic_LU,eigs_CUDA,eigs_quadratic_CUDA,get_companion,add_cylindrical_PML,add_twist_PML,add_rectangular_PML,nb_args,UnitfulField,FunctionField,FEMField,ArrayField,UnitfulModel
 import Base: *, /, -, +, sin, cos, sqrt, abs, abs2, real, imag, conj
 
 export FiberEMField

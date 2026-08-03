@@ -18,7 +18,7 @@ The fiber is assumed to be isotropic with a cylindrical symmetry and is describe
 - dPML: Thickness of the PML
 - alphaPML: attenuation coefficient of the PML
 """
-function FEM1D(lambda::realLength,nu::Int64,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10)
+function FEM1D(lambda::realLength,nu::Int64,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     model=um.model
     PositionUnit=um.unit
     if (lambda<=0u"m")
@@ -47,6 +47,15 @@ function FEM1D(lambda::realLength,nu::Int64,n_fonc::Function,um::UnitfulModel;ap
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
     end
     lambda_ini=lambda
     lambda=ustrip(PositionUnit,lambda)
@@ -149,31 +158,32 @@ function FEM1D(lambda::realLength,nu::Int64,n_fonc::Function,um::UnitfulModel;ap
     end
     U=TrialFESpace(V,0);
     k2=(2*pi/lambda)^2
-    r2=x->x[1]^2;
-    r=x->x[1];
-    epsi=x->eps_fonc(x)*x[1]^2*k2-nu^2;
-    ux=VectorValue(1.0,);
     if (dPML<=0)
-        A_task=Threads.@spawn assemble_matrix((u,v)->∫( -(∇(v)⋅∇(u))*r2 - v*(ux⋅∇(u))*r + (v⋅(epsi*u))  )*dΩ,U,V)
-        B_task=Threads.@spawn assemble_matrix((u,v)->∫((v⋅u)*r2  )dΩ,U,V)
+        r=x->x[1];
+        epsi=x->eps_fonc(x)*x[1]*k2-nu^2/x[1];
+        A_task=Threads.@spawn assemble_matrix((u,v)->∫( -(∇(v)⋅∇(u))*r + (v⋅(epsi*u))  )*dΩ,U,V)
+        B_task=Threads.@spawn assemble_matrix((u,v)->∫((v⋅u)*r  )dΩ,U,V)
     else
         rPML=rmax-dPML;
         alpha=x->alphaPML*(x[1]>rPML)
         s=x->(1.0+im*alpha(x)*(x[1]-rPML)^2/dPML^2);
-        A_task=Threads.@spawn assemble_matrix((u,v)->∫( -(∇(v)⋅∇(u))*r2/s - v*(ux⋅∇(u))*r + (v⋅(epsi*u))*s  )*dΩ,U,V)
-        B_task=Threads.@spawn assemble_matrix((u,v)->∫((v⋅u)*r2*s  )dΩ,U,V)
+        xtilde=x->(x[1]+im*alpha(x)*(x[1]-rPML)^3/3/dPML^2);
+        epsi2=x->eps_fonc(x)*xtilde(x)*k2-nu^2/xtilde(x);
+        A_task=Threads.@spawn assemble_matrix((u,v)->∫( -(∇(v)⋅∇(u))*xtilde/s + (v⋅(epsi2*u))*s  )*dΩ,U,V)
+        B_task=Threads.@spawn assemble_matrix((u,v)->∫((v⋅u)*xtilde*s  )dΩ,U,V)
     end
     A=fetch(A_task);
     B=fetch(B_task);
     if (verbose)
         println("Matrices of dimension ",size(A), " created.")
+        println("They contain ",nnz(A)," and ",nnz(B)," non-zero elements.")
     end
     if (solver==:LU)
         tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
     elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
     else
-        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
+        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=Int64(CUDSS_ir_n_steps),ir_tol=Float64(CUDSS_ir_tol),matching_alg=CUDSS_matching_alg);
     end
     neff=sqrt.(tmp1/k2);
     if (verbose)
@@ -243,9 +253,9 @@ The fiber is assumed to be isotropic with a cylindrical symmetry and is describe
 - dPML: Thickness of the PML (m)
 - alphaPML: attenuation coefficient of the PML
 """
-function FEM1D(lambda::Real,nu::Int64,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10)
+function FEM1D(lambda::Real,nu::Int64,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     n_fonc2=x->n_fonc(VectorValue(ustrip(u"m",x[1])))
-    FEM1D(lambda*u"m",nu,n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML*u"m",alphaPML=alphaPML)
+    FEM1D(lambda*u"m",nu,n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML*u"m",alphaPML=alphaPML,CUDSS_matching_alg=CUDSS_matching_alg,CUDSS_ir_tol=CUDSS_ir_tol,CUDSS_ir_n_steps=CUDSS_ir_n_steps)
 end
 
 function create_model_with_boundary(model::DiscreteModel;verbose::Bool=false)
@@ -349,7 +359,7 @@ The fiber is assumed to be isotropic and is described with its relative permitti
 - type: :Scalar or :Vector
 - twistPitch: twist pitch of the fiber. If Inf*u"m", the fiber is untwisted. Works for vector modes only.
 """
-function FEM2D(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Scalar,twistPitch::realLength=Inf*u"m")
+function FEM2D(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Scalar,twistPitch::realLength=Inf*u"m",CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     if (lambda<=0u"m")
         throw(DomainError(lamdba, "The wavelength lambda must be strictly positive"));
     end
@@ -374,14 +384,23 @@ function FEM2D(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff:
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
     end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
+    end
     eps_fonc=x->(n_fonc(x))^2
     if (type==:Scalar)
-        FEM2D_scalar(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag)
+        FEM2D_scalar(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag,CUDSS_matching_alg=CUDSS_matching_alg,CUDSS_ir_tol=CUDSS_ir_tol,CUDSS_ir_n_steps=CUDSS_ir_n_steps)
     else
         if ((dPML<=0u"m") && isinf(twistPitch))
-            FEM2D_vector_guided(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
+            FEM2D_vector_guided(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag,CUDSS_matching_alg=CUDSS_matching_alg,CUDSS_ir_tol=CUDSS_ir_tol,CUDSS_ir_n_steps=CUDSS_ir_n_steps)
         else
-            FEM2D_vector_leaky(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag,twistPitch=twistPitch)
+            FEM2D_vector_leaky(lambda,eps_fonc,um;approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML,alphaPML=alphaPML,boundary_tag=boundary_tag,twistPitch=twistPitch,CUDSS_matching_alg=CUDSS_matching_alg,CUDSS_ir_tol=CUDSS_ir_tol,CUDSS_ir_n_steps=CUDSS_ir_n_steps)
         end
     end
 end
@@ -408,12 +427,12 @@ The fiber is assumed to be isotropic and is described with its relative permitti
 - type: :Scalar or :Vector
 - twistPitch: twist pitch of the fiber (m). If Inf*u"m", the fiber is untwisted. Works for vector modes only.
 """
-function FEM2D(lambda::Real,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Vector,twistPitch::Real=Inf)
+function FEM2D(lambda::Real,n_fonc::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,dPML::Real=0,alphaPML::Real=10,boundary_tag::String="",type::Symbol=:Vector,twistPitch::Real=Inf,CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     n_fonc2=x->n_fonc(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
-    FEM2D(lambda*u"m",n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML*u"m",alphaPML=alphaPML,boundary_tag=boundary_tag,type=type,twistPitch=twistPitch*u"m")
+    FEM2D(lambda*u"m",n_fonc2,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,dPML=dPML*u"m",alphaPML=alphaPML,boundary_tag=boundary_tag,type=type,twistPitch=twistPitch*u"m",CUDSS_matching_alg=CUDSS_matching_alg,CUDSS_ir_tol=CUDSS_ir_tol,CUDSS_ir_n_steps=CUDSS_ir_n_steps)
 end
 
-function FEM2D_scalar(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="")
+function FEM2D_scalar(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     model=um.model
     PositionUnit=um.unit
     if (lambda<=0u"m")
@@ -439,6 +458,15 @@ function FEM2D_scalar(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
     end
 
     if (isempty(boundary_tag))
@@ -495,43 +523,23 @@ function FEM2D_scalar(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel
     dΩ = Measure(Ω,degree);
     if (dPML<=0)
         A_task=Threads.@spawn assemble_matrix((u,v)->∫( -∇(v)⋅∇(u) + k2*(v⋅(eps_fonc*u))  )*dΩ,U,V);
+        B_task=Threads.@spawn assemble_matrix((u,v)->∫(v⋅u  )dΩ,U,V);
     else
         if (circular)
             rPML=R-dPML
             r=x->hypot(x[1],x[2])
-            phi=x->atan(x[2],x[1]);
-            Sr=x->1.0+im*alphaPML*(r(x)-rPML)^2/(dPML)^2
-            Sphi=x->1.0+im*alphaPML/3.0*(r(x)-rPML)^3/(dPML)^2/r(x);
-            C=x->cos(phi(x));
-            S=x->sin(phi(x));
-            iSxx=x->(r(x)<rPML) ? ComplexF64(1.0) : C(x)^2/Sr(x)+S(x)^2/Sphi(x);
-            iSxy=x->(r(x)<rPML) ? ComplexF64(0.0) : (1/Sr(x)-1/Sphi(x))*C(x)*S(x);
-            iSyy=x->(r(x)<rPML) ? ComplexF64(1.0) : S(x)^2/Sr(x)+C(x)^2/Sphi(x);
-            dSr=x->2*im*alphaPML*(r(x)-rPML)/(dPML)^2
-            dSphi=x->-im*alphaPML/3.0*(r(x)-rPML)^3/(dPML)^2/r(x)^2+im*alphaPML*(r(x)-rPML)^2/(dPML)^2/r(x)
-            diSxx_dphi=x->-2*C(x)*S(x)/Sr(x)+2*C(x)*S(x)/Sphi(x)
-            diSxy_dphi=x->(1/Sr(x)-1/Sphi(x))*(C(x)^2-S(x)^2)
-            diSyy_dphi=x->2*C(x)*S(x)/Sr(x)-2*C(x)*S(x)/Sphi(x)
-            diSxx_dr=x->-C(x)^2*dSr(x)/Sr(x)^2-S(x)^2*dSphi(x)/Sphi(x)^2
-            diSxy_dr=x->(-dSr(x)/Sr(x)^2+dSphi(x)/Sphi(x)^2)*C(x)*S(x)
-            diSyy_dr=x->-S(x)^2*dSr(x)/Sr(x)^2-C(x)^2*dSphi(x)/Sphi(x)^2
-            diSxx_dx=x->(r(x)<rPML) ? ComplexF64(0.0) : C(x)*diSxx_dr(x)-S(x)/r(x)*diSxx_dphi(x)
-            diSxy_dx=x->(r(x)<rPML) ? ComplexF64(0.0) : C(x)*diSxy_dr(x)-S(x)/r(x)*diSxy_dphi(x)
-            diSxy_dy=x->(r(x)<rPML) ? ComplexF64(0.0) : S(x)*diSxy_dr(x)+C(x)/r(x)*diSxy_dphi(x)
-            diSyy_dy=x->(r(x)<rPML) ? ComplexF64(0.0) : S(x)*diSyy_dr(x)+C(x)/r(x)*diSyy_dphi(x)
-            ux=VectorValue(1.0,0.0);
-            uy=VectorValue(0.0,1.0);
-            fx=x->iSxx(x)*diSxx_dx(x)+iSxy(x)*diSyy_dy(x)+iSxx(x)*diSxy_dy(x)+iSxy(x)*diSxy_dx(x)
-            fy=x->iSxy(x)*diSxx_dx(x)+iSxy(x)*diSxy_dy(x)+iSyy(x)*diSyy_dy(x)+iSyy(x)*diSxy_dx(x)
-            gxx=x->iSxx(x)*iSxx(x)+iSxy(x)*iSxy(x)
-            gxy=x->iSxx(x)*iSxy(x)+iSxy(x)*iSyy(x)
-            gyx=x->iSxy(x)*iSxx(x)+iSyy(x)*iSxy(x)
-            gyy=x->iSxy(x)*iSxy(x)+iSyy(x)*iSyy(x)
-            a1=(u,v)->-(∇(u)⋅ux)*(∇(v)⋅ux)*gxx - (∇(u)⋅ux)*v*fx
-            a2=(u,v)->-(∇(u)⋅ux)*(∇(v)⋅uy)*gxy 
-            a3=(u,v)->-(∇(u)⋅uy)*(∇(v)⋅ux)*gyx - (∇(u)⋅uy)*v*fy
-            a4=(u,v)->-(∇(u)⋅uy)*(∇(v)⋅uy)*gyy 
-            A_task=Threads.@spawn assemble_matrix((u,v)->∫( a1(u,v) + a2(u,v) + a3(u,v) + a4(u,v) + k2*(v⋅(eps_fonc*u))  )*dΩ,U,V)
+            alpha=x->alphaPML*(r(x)>rPML)
+            Sr=x->1.0+im*alpha(x)*(r(x)-rPML)^2/(dPML)^2
+            Sphi=x->1.0+im*alpha(x)/3.0*(r(x)-rPML)^3/(dPML)^2/r(x);
+            C=x->x[1]/r(x);
+            S=x->x[2]/r(x);
+            sxx=x->(Sphi(x)/Sr(x)*C(x)^2+Sr(x)/Sphi(x)*S(x)^2);
+            sxy=x->(Sphi(x)/Sr(x)-Sr(x)/Sphi(x))*C(x)*S(x);
+            syy=x->(Sphi(x)/Sr(x)*S(x)^2+Sr(x)/Sphi(x)*C(x)^2);
+            ss(x)=Sr(x)*Sphi(x)
+            T=x->TensorValue(sxx(x),sxy(x),sxy(x),syy(x))
+            A_task=Threads.@spawn assemble_matrix((u,v)->∫( -∇(u)⋅(T⋅∇(v)) + k2*(ss*(v⋅(eps_fonc*u)))  )*dΩ,U,V)
+            B_task=Threads.@spawn assemble_matrix((u,v)->∫( ss*(v⋅u)  )dΩ,U,V);
         else
             xPML_max=x_boundary_max-dPML
             xPML_min=x_boundary_min+dPML
@@ -542,30 +550,25 @@ function FEM2D_scalar(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel
             alphay_max=x->alphaPML*(x[2]>yPML_max)
             alphay_min=x->alphaPML*(x[2]<yPML_min)
             sx=x->(1.0+im*alphax_max(x)*(x[1]-xPML_max)^2/dPML^2+im*alphax_min(x)*(x[1]-xPML_min)^2/dPML^2);
-            sx_prime=x->(im*alphax_max(x)*2*(x[1]-xPML_max)/dPML^2+im*alphax_min(x)*2*(x[1]-xPML_min)/dPML^2)
             sy=x->(1.0+im*alphay_max(x)*(x[2]-yPML_max)^2/dPML^2+im*alphay_min(x)*(x[2]-yPML_min)^2/dPML^2);
-            sy_prime=x->(im*alphay_max(x)*2*(x[2]-yPML_max)/dPML^2+im*alphay_min(x)*2*(x[2]-yPML_min)/dPML^2)
-            sx2=x->sx(x)^2
-            sy2=x->sy(x)^2
-            sx3=x->sx_prime(x)/sx(x)^3
-            sy3=x->sy_prime(x)/sy(x)^3
-            ux=VectorValue(1.0,0.0);
-            uy=VectorValue(0.0,1.0);
-            A_task=Threads.@spawn assemble_matrix((u,v)->∫( -(∇(u)⋅ux)*((∇(v)⋅ux)/sx2-v*sx3) -(∇(u)⋅uy)*((∇(v)⋅uy)/sy2-v*sy3)  + k2*(v⋅(eps_fonc*u))  )*dΩ,U,V)
+            sxsy=x->sx(x)*sy(x)
+            T=x->TensorValue(sy(x)/sx(x),0,0,sx(x)/sy(x))
+            A_task=Threads.@spawn assemble_matrix((u,v)->∫( -∇(u)⋅(T⋅∇(v)) + k2*(sxsy*(v⋅(eps_fonc*u)))  )*dΩ,U,V)
+            B_task=Threads.@spawn assemble_matrix((u,v)->∫( sxsy*(v⋅u  ))*dΩ,U,V);
         end
     end
-    B_task=Threads.@spawn assemble_matrix((u,v)->∫(v⋅u  )dΩ,U,V);
     A=fetch(A_task);
     B=fetch(B_task);
     if (verbose)
         println("Matrices of dimension ",size(A), " created.")
+        println("They contain ",nnz(A)," and ",nnz(B)," non-zero elements.")
     end
     if (solver==:LU)
         tmp1,tmp2=eigs_LU(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
     elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
     else
-        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
+        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=Int64(CUDSS_ir_n_steps),ir_tol=Float64(CUDSS_ir_tol),matching_alg=CUDSS_matching_alg);
     end
     neff=sqrt.(tmp1/k2);
     if (verbose)
@@ -665,7 +668,7 @@ function computeH(Bt,Bz)
 end
 
 
-function FEM2D_vector_guided(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,boundary_tag::String="")
+function FEM2D_vector_guided(lambda::realLength,eps_fonc_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,boundary_tag::String="",CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     model=um.model
     PositionUnit=um.unit
     if (lambda<=0u"m")
@@ -691,6 +694,15 @@ function FEM2D_vector_guided(lambda::realLength,eps_fonc_ini::Function,um::Unitf
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
     end
 
     if (isempty(boundary_tag))
@@ -745,7 +757,7 @@ function FEM2D_vector_guided(lambda::realLength,eps_fonc_ini::Function,um::Unitf
     elseif (solver==:MUMPS)
         tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
     else
-        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
+        tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=Int64(CUDSS_ir_n_steps),ir_tol=Float64(CUDSS_ir_tol),matching_alg=CUDSS_matching_alg);
     end
     neff=sqrt.(tmp1/k2);
     if (verbose)
@@ -781,7 +793,7 @@ function FEM2D_vector_guided(lambda::realLength,eps_fonc_ini::Function,um::Unitf
     return sol;
 end
 
-function FEM2D_vector_leaky(lambda::realLength,eps_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",twistPitch::realLength=Inf*u"m")
+function FEM2D_vector_leaky(lambda::realLength,eps_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,dPML::realLength=0u"m",alphaPML::Real=10,boundary_tag::String="",twistPitch::realLength=Inf*u"m",CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     model=um.model
     PositionUnit=um.unit
     if (lambda<=0u"m")
@@ -810,6 +822,15 @@ function FEM2D_vector_leaky(lambda::realLength,eps_fonc::Function,um::UnitfulMod
     end
     if (twistPitch<=0u"m")
         throw(DomainError(twistPitch, "The twist pitch must be positive"));
+    end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
     end
     
     if (isempty(boundary_tag))
@@ -881,7 +902,7 @@ The fiber is anisotropic and described with its relative permittivity tensor and
 - boundary_tag: tag of the boundary in model.
 
 """
-function FEM2D_anisotropic(lambda::realLength,epsilon_ini::Function,mu_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+function FEM2D_anisotropic(lambda::realLength,epsilon_ini::Function,mu_ini::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=2,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="",CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     model=um.model
     PositionUnit=um.unit
     if (lambda<=0u"m")
@@ -910,6 +931,15 @@ function FEM2D_anisotropic(lambda::realLength,epsilon_ini::Function,mu_ini::Func
     end
     if (tol<0)
         throw(DomainError(tol, "The tolerance must be positive or null"));
+    end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
     end
 
     lambda_ini=lambda
@@ -950,18 +980,16 @@ function FEM2D_anisotropic(lambda::realLength,epsilon_ini::Function,mu_ini::Func
     A=fetch(A_task);
     B=fetch(B_task);
     C=fetch(C_task);
-    #return A,B,C
-    E,F=get_companion(A,im.*B,C);
-    #return E,F;
+    #quadratic eigenvalue problem : beta^2*C*u+i*beta*B*u+A*u=0
     if (verbose)
-        println("Matrices of dimension ",size(E), " created.")
+        println("Matrices of dimension ",size(A), " created.")
     end
     if (solver==:LU)
-        tmp1,tmp2=eigs_LU(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+        tmp1,tmp2=eigs_quadratic_LU(A,im*B,C,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
     elseif (solver==:MUMPS)
-        tmp1,tmp2=eigs_MUMPS(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+        tmp1,tmp2=eigs_quadratic_MUMPS(A,im*B,C,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
     elseif (solver==:CUDSS)
-        tmp1,tmp2=eigs_CUDA(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose,ir_n_steps=10);
+        tmp1,tmp2=eigs_quadratic_CUDA(A,im*B,C,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose,ir_n_steps=Int64(CUDSS_ir_n_steps),ir_tol=Float64(CUDSS_ir_tol),matching_alg=CUDSS_matching_alg);
     else
         throw(DomainError(solver, "solver must be :LU, :MUMPS or :CUDSS"));
     end
@@ -1011,10 +1039,10 @@ The fiber is anisotropic and described with its relative permittivity tensor and
 - boundary_tag: tag of the boundary in model.
 
 """
-function FEM2D_anisotropic(lambda::Real,epsilon_ini::Function,mu_ini::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="")
+function FEM2D_anisotropic(lambda::Real,epsilon_ini::Function,mu_ini::Function,model::DiscreteModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=1,field::Bool=false,solver::Symbol=:LU,tol::Float64=0.0,verbose::Bool=false,boundary_tag::String="",CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     eps_fonc=x->epsilon_ini(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
     mu_fonc=x->mu_ini(VectorValue(ustrip(u"m",x[1]),ustrip(u"m",x[2])))
-    FEM2D_anisotropic(lambda*1u"m",eps_fonc,mu_fonc,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag)
+    FEM2D_anisotropic(lambda*1u"m",eps_fonc,mu_fonc,UnitfulModel(model,u"m"),approx_neff=approx_neff,neigs=neigs,order=order,field=field,solver=solver,tol=tol,verbose=verbose,boundary_tag=boundary_tag,CUDSS_matching_alg=CUDSS_matching_alg,CUDSS_ir_tol=CUDSS_ir_tol,CUDSS_ir_n_steps=CUDSS_ir_n_steps)
 end
 """
     FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:inverseRealLength}=[0.0,0.0]u"m^-1",type::Symbol=:Scalar)
@@ -1036,7 +1064,7 @@ The fiber is isotropic and described with its relative permittivity. The mesh mu
 - type: :Scalar or :Vector
 
 """
-function FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:inverseRealLength}=[0.0,0.0]u"m^-1",type::Symbol=:Scalar)
+function FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;approx_neff::Real=0,neigs::Int64=1,order::Int64=3,field::Bool=false,solver::Symbol=:LU,tol::Real=0.0,verbose::Bool=false,kt::AbstractVector{<:inverseRealLength}=[0.0,0.0]u"m^-1",type::Symbol=:Scalar,CUDSS_matching_alg::String="algo6",CUDSS_ir_tol::Real=1E-9,CUDSS_ir_n_steps::Int=10)
     model=um.model
     PositionUnit=um.unit
     lambda_ini=lambda
@@ -1068,6 +1096,15 @@ function FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;app
     end
     if (!(type in [:Scalar,:Vector]))
         throw(DomainError(solver, "solver must be :Scalar or :Vector"));
+    end
+    if (CUDSS_matching_alg ∉ ["algo1","algo2","algo3","algo4","algo5","algo6"])
+        throw(DomainError(CUDSS_matching_alg, "CUDSS_matching_alg must be algo1, algo2, algo3, algo4, algo5 or algo6"));
+    end
+    if (CUDSS_ir_tol<0)
+        throw(DomainError(CUDSS_ir_tol, "CUDSS_ir_tol must be strictly positive"));
+    end
+    if (CUDSS_ir_n_steps<0)
+        throw(DomainError(CUDSS_ir_n_steps, "CUDSS_ir_n_steps must be strictly positive"));
     end
 
     coord=Gridap.ReferenceFEs.get_node_coordinates(model.grid)
@@ -1104,16 +1141,15 @@ function FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;app
         A=fetch(A_task);
         B=fetch(B_task);
         C=fetch(C_task);
-        E,F=get_companion(A,im.*B,C);
         if (verbose)
-            println("Matrices of dimension ",size(E), " created.")
+            println("Matrices of dimension ",size(A), " created.")
         end
         if (solver==:LU)
-            tmp1,tmp2=eigs_LU(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+            tmp1,tmp2=eigs_quadratic_LU(A,im*B,C,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
         elseif (solver==:MUMPS)
-            tmp1,tmp2=eigs_MUMPS(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
+            tmp1,tmp2=eigs_quadratic_MUMPS(A,im*B,C,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose);
         elseif (solver==:CUDSS)
-            tmp1,tmp2=eigs_CUDA(F,E,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose,ir_n_steps=10);
+            tmp1,tmp2=eigs_quadratic_CUDA(A,im*B,C,sigma=approx_neff*k,nev=neigs,tol=tol,verbose=verbose,ir_n_steps=Int64(CUDSS_ir_n_steps),ir_tol=Float64(CUDSS_ir_tol),matching_alg=CUDSS_matching_alg);
         else
             throw(DomainError(solver, "solver must be :LU, :MUMPS or CUDSS"));
         end
@@ -1162,7 +1198,7 @@ function FEM2D_periodic(lambda::realLength,n_fonc::Function,um::UnitfulModel;app
         elseif (solver==:MUMPS)
             tmp1,tmp2=eigs_MUMPS(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose);
         else
-            tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=10);
+            tmp1,tmp2=eigs_CUDA(A,B,sigma=approx_neff^2*k2,nev=neigs,tol=Float64(tol),verbose=verbose,ir_n_steps=Int64(CUDSS_ir_n_steps),ir_tol=Float64(CUDSS_ir_tol),matching_alg=CUDSS_matching_alg);
         end
         neff=sqrt.(tmp1/k2);
         if (verbose)
